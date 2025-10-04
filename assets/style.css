@@ -1,0 +1,31 @@
+.plotly-btn {
+    background-color: white;
+    border: 1px solid lightgray;
+    border-radius: 4px;
+    color: black;
+    padding: 6px 12px;
+    margin: 5px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover effect for all buttons */
+.plotly-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #999;
+    color: black; /* optional, ensures text stays black */
+}
+
+#button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.js-plotly-plot .plotly {
+    background-color: white !important;
+}
