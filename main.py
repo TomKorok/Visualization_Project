@@ -1,8 +1,6 @@
-import time
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Output, Input, State, ctx
-import plotly.express as px
 
 # --- Load data ---
 df = pd.read_csv("BigmacPrice.csv")
@@ -71,8 +69,8 @@ map_fig = go.Figure(
         updatemenus=[dict(
             type="buttons",
             showactive=False,
-            x=0.05, y=0.05,
-            xanchor="left", yanchor="bottom",
+            x=0.05, y=0.95,
+            xanchor="left", yanchor="top",
             buttons=[
                 dict(
                     label="Play",
@@ -87,6 +85,14 @@ map_fig = go.Figure(
                     args=[[None], {"frame": {"duration": 0, "redraw": False},
                                    "mode": "immediate",
                                    "transition": {"duration": 0}}]
+                ),
+                dict(
+                    label="Reset",
+                    method="animate",
+                    args=[[str(years[0])],   # reset to first year
+                          {"frame": {"duration": 500, "redraw": True},
+                           "mode": "immediate",
+                           "transition": {"duration": 300}}]
                 )
             ]
         )],
@@ -114,15 +120,14 @@ selected_countries = ["Denmark"]
 
 app.layout = html.Div([
     html.H3("Big Mac Index — Click a Country to Compare"),
-    html.Div([
-        html.Button("Reset", id="reset-btn", n_clicks=0, className="plotly-btn", title="Reset"),
-        html.Button("Play", id="play-btn", n_clicks=0, className="plotly-btn", title="Play animation"),
-        html.Button("Pause", id="pause-btn", n_clicks=0, className="plotly-btn", title="Pause animation")
-    ], style={"marginBottom": "10px"}),
     dcc.Graph(id="world-map", figure=map_fig),
     dcc.Store(id="last-clicked", data=None),  # stores last clicked country so we can handle deselects
-    dcc.Graph(id="line-chart")
+    dcc.Graph(id="line-chart"),
+    html.Div([
+        html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
+    ])
 ])
+
 
 # --- Line chart callback (multi-country + highlight current year) ---
 @app.callback(
@@ -186,18 +191,6 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     )
 
     return fig, last_clicked
-
-
-# --- Reset map callback ---
-@app.callback(
-    Output("world-map", "figure"),
-    Input("reset-btn", "n_clicks")
-)
-def reset_map(n_clicks):
-    if n_clicks == 0:
-        return initial_map_fig
-    return initial_map_fig
-
 
 if __name__ == "__main__":
     app.run(debug=True)
