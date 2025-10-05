@@ -63,8 +63,6 @@ map_fig = go.Figure(
         title=f"Big Mac Dollar Prices — {years[0]}",
         clickmode="event+select",  # important: enable selection events
         geo=dict(showframe=False, showcoastlines=True, projection_type="natural earth"),
-        width=1400,
-        height=800,
         margin=dict(l=0, r=0, t=50, b=0),
         updatemenus=[dict(
             type="buttons",
@@ -98,7 +96,10 @@ map_fig = go.Figure(
         )],
         sliders=[dict(
             active=0,
-            pad={"t": 50},
+            x=0.5,
+            xanchor="center",
+            len=0.9,
+            pad={"t": 50, "b": 20},  #
             steps=[dict(
                 label=str(year),
                 method="animate",
@@ -119,11 +120,21 @@ app = Dash(__name__)
 selected_countries = ["Denmark"]
 
 app.layout = html.Div([
-    html.H3("Big Mac Index — Click a Country to Compare"),
-    dcc.Graph(id="world-map", figure=map_fig),
+    html.H3("Big Mac Index World Wide Comparison"),
+    html.Div(
+        dcc.Graph(id="world-map", figure=map_fig, style={"width": "100%", "height": "100%"}),
+        style={
+            "display": "flex",
+            "justifyContent": "center",  # centers horizontally
+            "alignItems": "center",  # centers vertically if container has height
+            "flexDirection": "column",
+            "width": "100%",
+            "height": "80vh"
+        }
+    ),
     dcc.Store(id="last-clicked", data=None),  # stores last clicked country so we can handle deselects
-    dcc.Graph(id="line-chart"),
     html.Div([
+        dcc.Graph(id="line-chart"),
         html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
     ])
 ])
@@ -184,7 +195,7 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
         ))
 
     fig.update_layout(
-        title="Big Mac Prices Over Time",
+        title="Big Mac Prices Over Time -- Click a country to compare",
         xaxis_title="Year",
         yaxis_title="Price (USD)",
         showlegend=True
@@ -193,4 +204,4 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     return fig, last_clicked
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
