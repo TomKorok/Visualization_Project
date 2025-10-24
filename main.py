@@ -54,6 +54,8 @@ for year in years:
             "Big Mac Price: %{customdata[1]:.2f} USD<br>"
             "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
         ),
+        selected=dict(marker=dict(opacity=0.5)),
+        unselected=dict(marker=dict(opacity=0.5))
     )
 
     # Make an invisible marker per country so selection events are triggered reliably.
@@ -66,8 +68,8 @@ for year in years:
         textfont=dict(size=11, color="black", family="Arial"),
         hoverinfo="skip",
         customdata=dff["country"].tolist(),  # also attach customdata here
-        selected=dict(marker=dict(opacity=0), textfont=dict(color="black")),
-        unselected=dict(marker=dict(opacity=0), textfont=dict(color="black"))
+        selected=dict(marker=dict(opacity=0)),
+        unselected=dict(marker=dict(opacity=0))
     )
 
     frames.append(go.Frame(
