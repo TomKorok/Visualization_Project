@@ -7,8 +7,8 @@ BigmacIndex = dh.LoadBigMacIndex()
 
 MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
 
-min_price = MergedIndex["price"].min()
-max_price = MergedIndex["price"].max()
+min_price = MergedIndex["price_adjusted"].min()
+max_price = MergedIndex["price_adjusted"].max()
 
 # --- Create frames --- (add customdata so we reliably know country in callbacks)
 years = sorted(int(y) for y in MergedIndex["year"].unique())
@@ -27,8 +27,12 @@ for year in years:
         marker_line_width=0.5,
         colorbar=dict(title="Price (USD)"),
         showscale=True,
-        customdata=dff["country"].tolist(),  # <-- customdata with country names
-        hovertemplate="%{customdata}<br>Price: %{z:.2f}$<extra></extra>",
+        customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
+        hovertemplate=(
+            "Country: %{customdata[0]}<br>"
+            "Big Mac Price: %{customdata[1]:.2f} USD<br>"
+            "Democracy Index: %{customdata[2]:.2f}<br>"
+        ),
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1))
     )
@@ -37,7 +41,6 @@ for year in years:
     democracy_bubbles = go.Scattergeo(
         locations=dff["country"],
         locationmode="country names",
-        text=dff["DIIndex"].astype(str),
         mode="markers",
         marker=dict(
             size=dff["DIIndex"] * 5,   # scale bubble size
@@ -45,7 +48,12 @@ for year in years:
             opacity=0.5,
             line=dict(width=0.7, color="white")
         ),
-        hoverinfo="text",
+        customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
+        hovertemplate=(
+            "Country: %{customdata[0]}<br>"
+            "Big Mac Price: %{customdata[1]:.2f} USD<br>"
+            "Democracy Index: %{customdata[2]:.2f}<br>"
+        ),
         name="Democracy Index"
     )
 
@@ -53,7 +61,6 @@ for year in years:
     scatter_text = go.Scattergeo(
         locations=dff["country"],
         locationmode="country names",
-        text=dff["price_adjusted"].round(2).astype(str),
         mode="markers+text",
         marker=dict(size=8, opacity=0),  # invisible but selectable
         textposition="top center",
