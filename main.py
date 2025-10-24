@@ -1,46 +1,21 @@
 import pandas as pd
 import plotly.graph_objects as go
+import DataHandling as dh
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
-# --- Load data ---
-df = pd.read_csv("BigmacPrice.csv")
-df = df.rename(columns={"name": "country", "dollar_price": "price"})
-df["year"] = pd.to_datetime(df["date"]).dt.year
-df = df.groupby(["country", "year"], as_index=False)["price"].mean()
+DemocracyIndex = dh.LoadDemocracyIndex()
+BigmacIndex = dh.LoadBigMacIndex()
 
-years = sorted(int(y) for y in df["year"].unique())
-min_price = df["price"].min()
-max_price = df["price"].max()
+MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
 
-#Calculate prices after inflation
-cpi_data = {
-    'year': [
-        2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-        2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-        2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
-    ],
-    'avg_cpi': [
-        195.3, 201.6, 207.3, 215.3, 214.5, 218.1, 224.9, 229.6,
-        233.0, 237.0, 240.0, 245.1, 251.1, 255.7, 258.8, 264.9, 
-        271.0, 276.7,281.9, 287.5, 292.7, 296.8, 300.8, 306.0, 313.7
-    ]
-}
-
-cpi_df = pd.DataFrame(cpi_data)
-
-cpi_map = dict(zip(cpi_df['year'], cpi_df['avg_cpi']))
-
-cpi_2024 = cpi_map[2024]
-
-df['cpi_for_year'] = df['year'].map(cpi_map)
-df['inflation_multiplier'] = cpi_2024 / df['cpi_for_year']
-
-df['price_adjusted'] = df['price'] * df['inflation_multiplier']
+min_price = MergedIndex["price"].min()
+max_price = MergedIndex["price"].max()
 
 # --- Create frames --- (add customdata so we reliably know country in callbacks)
+years = sorted(int(y) for y in MergedIndex["year"].unique())
 frames = []
 for year in years:
-    dff = df[df["year"] == year]
+    dff = MergedIndex[BigmacIndex["year"] == year]
 
     choropleth = go.Choropleth(
         locations=dff["country"],
@@ -211,7 +186,7 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     # --- Build the line chart ---
     fig = go.Figure()
     for country in selected_countries:
-        df_country = df[df["country"] == country].sort_values("year")
+        df_country = BigmacIndex[BigmacIndex["country"] == country].sort_values("year")
         fig.add_trace(go.Scatter(
             x=df_country["year"],
             y=df_country["price_adjusted"],
