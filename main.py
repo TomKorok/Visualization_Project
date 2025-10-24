@@ -1,53 +1,21 @@
 import pandas as pd
 import plotly.graph_objects as go
+import DataHandling as dh
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
-# --- Load Big Mac Price ---
-df_bm = pd.read_csv("BigmacPrice.csv")
-df_bm = df_bm.rename(columns={"name": "country", "dollar_price": "price"})
-df_bm["year"] = pd.to_datetime(df_bm["date"]).dt.year
-df_bm = df_bm.groupby(["country", "year"], as_index=False)["price"].mean()
+DemocracyIndex = dh.LoadDemocracyIndex()
+BigmacIndex = dh.LoadBigMacIndex()
 
+MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
 
-# --- Load Democracy Index ---
-df_di = pd.read_csv("DI_INDEX.csv")
-df_di = df_di.rename(columns={"REF_AREA_LABEL": "country", "OBS_VALUE": "index", "TIME_PERIOD": "year"})
-
-years = sorted(int(y) for y in df_bm["year"].unique())
-
-#Calculate prices after inflation
-cpi_data = {
-    'year': [
-        2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-        2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-        2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
-    ],
-    'avg_cpi': [
-        195.3, 201.6, 207.3, 215.3, 214.5, 218.1, 224.9, 229.6,
-        233.0, 237.0, 240.0, 245.1, 251.1, 255.7, 258.8, 264.9, 
-        271.0, 276.7,281.9, 287.5, 292.7, 296.8, 300.8, 306.0, 313.7
-    ]
-}
-
-cpi_df = pd.DataFrame(cpi_data)
-
-cpi_map = dict(zip(cpi_df['year'], cpi_df['avg_cpi']))
-
-cpi_2024 = cpi_map[2024] #take 2024 as the baseline
-
-df_bm['cpi_for_year'] = df_bm['year'].map(cpi_map)
-df_bm['inflation_multiplier'] = cpi_2024 / df_bm['cpi_for_year']
-
-df_bm['price_adjusted'] = df_bm['price'] * df_bm['inflation_multiplier']
-
-min_price = df_bm["price_adjusted"].min()
-max_price = df_bm["price_adjusted"].max()
+min_price = MergedIndex["price"].min()
+max_price = MergedIndex["price"].max()
 
 # --- Create frames --- (add customdata so we reliably know country in callbacks)
+years = sorted(int(y) for y in MergedIndex["year"].unique())
 frames = []
 for year in years:
-    df_bm_cy = df_bm[df_bm["year"] == year]
-    df_di_cy = df_di[df_di["year"] == year]
+    dff = MergedIndex[MergedIndex["year"] == year]
 
     choropleth = go.Choropleth(
         locations=df_bm_cy["country"],
@@ -234,7 +202,7 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     # --- Build the line chart ---
     fig = go.Figure()
     for country in selected_countries:
-        df_country = df_bm[df_bm["country"] == country].sort_values("year")
+        df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
         fig.add_trace(go.Scatter(
             x=df_country["year"],
             y=df_country["price_adjusted"],
