@@ -18,8 +18,8 @@ for year in years:
     dff = MergedIndex[MergedIndex["year"] == year]
 
     choropleth = go.Choropleth(
-        locations=dff["country"],
-        z=dff["price_adjusted"],
+        locations=df_bm_cy["country"],
+        z=df_bm_cy["price_adjusted"],
         locationmode="country names",
         zmin=min_price,
         zmax=max_price,
@@ -28,29 +28,45 @@ for year in years:
         marker_line_width=0.5,
         colorbar=dict(title="Price (USD)"),
         showscale=True,
-        customdata=dff["country"].tolist(),  # <-- customdata with country names
+        customdata=df_bm_cy["country"].tolist(),  # <-- customdata with country names
         hovertemplate="%{customdata}<br>Price: %{z:.2f}$<extra></extra>",
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1))
     )
 
+    # --- Democracy Index Bubis Bublé ---
+    democracy_bubbles = go.Scattergeo(
+        locations=df_di_cy["country"],
+        locationmode="country names",
+        text=df_di_cy["index"].astype(str),
+        mode="markers",
+        marker=dict(
+            size=df_di_cy["index"] * 5,   # scale bubble size
+            color="blue",
+            opacity=0.5,
+            line=dict(width=0.7, color="white")
+        ),
+        hoverinfo="text",
+        name="Democracy Index"
+    )
+
     # Make an invisible marker per country so selection events are triggered reliably.
     scatter_text = go.Scattergeo(
-        locations=dff["country"],
+        locations=df_bm_cy["country"],
         locationmode="country names",
-        text=dff["price_adjusted"].round(2).astype(str),
+        text=df_bm_cy["price_adjusted"].round(2).astype(str),
         mode="markers+text",
         marker=dict(size=8, opacity=0),  # invisible but selectable
         textposition="top center",
         textfont=dict(size=11, color="black", family="Arial"),
         hoverinfo="skip",
-        customdata=dff["country"].tolist(),  # also attach customdata here
+        customdata=df_bm_cy["country"].tolist(),  # also attach customdata here
         selected=dict(marker=dict(opacity=0), textfont=dict(color="black")),
         unselected=dict(marker=dict(opacity=0), textfont=dict(color="black"))
     )
 
     frames.append(go.Frame(
-        data=[choropleth, scatter_text],
+        data=[choropleth, scatter_text, democracy_bubbles],
         name=str(year),
         layout=go.Layout(title_text=f"Big Mac Dollar Prices — {year}")
     ))
