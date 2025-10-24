@@ -15,7 +15,7 @@ max_price = MergedIndex["price"].max()
 years = sorted(int(y) for y in MergedIndex["year"].unique())
 frames = []
 for year in years:
-    dff = MergedIndex[BigmacIndex["year"] == year]
+    dff = MergedIndex[MergedIndex["year"] == year]
 
     choropleth = go.Choropleth(
         locations=dff["country"],
@@ -186,7 +186,7 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     # --- Build the line chart ---
     fig = go.Figure()
     for country in selected_countries:
-        df_country = BigmacIndex[BigmacIndex["country"] == country].sort_values("year")
+        df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
         fig.add_trace(go.Scatter(
             x=df_country["year"],
             y=df_country["price_adjusted"],
