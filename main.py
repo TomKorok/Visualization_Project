@@ -1,4 +1,3 @@
-import pandas as pd
 import plotly.graph_objects as go
 import DataHandling as dh
 from dash import Dash, dcc, html, Output, Input, State, ctx
@@ -38,10 +37,10 @@ for year in years:
     democracy_bubbles = go.Scattergeo(
         locations=dff["country"],
         locationmode="country names",
-        text=dff["index"].astype(str),
+        text=dff["DIIndex"].astype(str),
         mode="markers",
         marker=dict(
-            size=dff["index"] * 5,   # scale bubble size
+            size=dff["DIIndex"] * 5,   # scale bubble size
             color="blue",
             opacity=0.5,
             line=dict(width=0.7, color="white")
