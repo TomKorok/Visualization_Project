@@ -31,7 +31,7 @@ for year in years:
         hovertemplate=(
             "Country: %{customdata[0]}<br>"
             "Big Mac Price: %{customdata[1]:.2f} USD<br>"
-            "Democracy Index: %{customdata[2]:.2f}<br>"
+            "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
         ),
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1))
@@ -52,9 +52,8 @@ for year in years:
         hovertemplate=(
             "Country: %{customdata[0]}<br>"
             "Big Mac Price: %{customdata[1]:.2f} USD<br>"
-            "Democracy Index: %{customdata[2]:.2f}<br>"
+            "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
         ),
-        name="Democracy Index"
     )
 
     # Make an invisible marker per country so selection events are triggered reliably.
