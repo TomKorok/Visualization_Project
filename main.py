@@ -2,15 +2,18 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
-# --- Load data ---
-df = pd.read_csv("BigmacPrice.csv")
-df = df.rename(columns={"name": "country", "dollar_price": "price"})
-df["year"] = pd.to_datetime(df["date"]).dt.year
-df = df.groupby(["country", "year"], as_index=False)["price"].mean()
+# --- Load Big Mac Price ---
+df_bm = pd.read_csv("BigmacPrice.csv")
+df_bm = df_bm.rename(columns={"name": "country", "dollar_price": "price"})
+df_bm["year"] = pd.to_datetime(df_bm["date"]).dt.year
+df_bm = df_bm.groupby(["country", "year"], as_index=False)["price"].mean()
 
-years = sorted(int(y) for y in df["year"].unique())
-min_price = df["price"].min()
-max_price = df["price"].max()
+
+# --- Load Democracy Index ---
+df_di = pd.read_csv("DI_INDEX.csv")
+df_di = df_di.rename(columns={"REF_AREA_LABEL": "country", "OBS_VALUE": "index", "TIME_PERIOD": "year"})
+
+years = sorted(int(y) for y in df_bm["year"].unique())
 
 #Calculate prices after inflation
 cpi_data = {
@@ -30,21 +33,25 @@ cpi_df = pd.DataFrame(cpi_data)
 
 cpi_map = dict(zip(cpi_df['year'], cpi_df['avg_cpi']))
 
-cpi_2024 = cpi_map[2024]
+cpi_2024 = cpi_map[2024] #take 2024 as the baseline
 
-df['cpi_for_year'] = df['year'].map(cpi_map)
-df['inflation_multiplier'] = cpi_2024 / df['cpi_for_year']
+df_bm['cpi_for_year'] = df_bm['year'].map(cpi_map)
+df_bm['inflation_multiplier'] = cpi_2024 / df_bm['cpi_for_year']
 
-df['price_adjusted'] = df['price'] * df['inflation_multiplier']
+df_bm['price_adjusted'] = df_bm['price'] * df_bm['inflation_multiplier']
+
+min_price = df_bm["price_adjusted"].min()
+max_price = df_bm["price_adjusted"].max()
 
 # --- Create frames --- (add customdata so we reliably know country in callbacks)
 frames = []
 for year in years:
-    dff = df[df["year"] == year]
+    df_bm_cy = df_bm[df_bm["year"] == year]
+    df_di_cy = df_di[df_di["year"] == year]
 
     choropleth = go.Choropleth(
-        locations=dff["country"],
-        z=dff["price_adjusted"],
+        locations=df_bm_cy["country"],
+        z=df_bm_cy["price_adjusted"],
         locationmode="country names",
         zmin=min_price,
         zmax=max_price,
@@ -53,29 +60,45 @@ for year in years:
         marker_line_width=0.5,
         colorbar=dict(title="Price (USD)"),
         showscale=True,
-        customdata=dff["country"].tolist(),  # <-- customdata with country names
+        customdata=df_bm_cy["country"].tolist(),  # <-- customdata with country names
         hovertemplate="%{customdata}<br>Price: %{z:.2f}$<extra></extra>",
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1))
     )
 
+    # --- Democracy Index Bubis Bublé ---
+    democracy_bubbles = go.Scattergeo(
+        locations=df_di_cy["country"],
+        locationmode="country names",
+        text=df_di_cy["index"].astype(str),
+        mode="markers",
+        marker=dict(
+            size=df_di_cy["index"] * 5,   # scale bubble size
+            color="blue",
+            opacity=0.5,
+            line=dict(width=0.7, color="white")
+        ),
+        hoverinfo="text",
+        name="Democracy Index"
+    )
+
     # Make an invisible marker per country so selection events are triggered reliably.
     scatter_text = go.Scattergeo(
-        locations=dff["country"],
+        locations=df_bm_cy["country"],
         locationmode="country names",
-        text=dff["price_adjusted"].round(2).astype(str),
+        text=df_bm_cy["price_adjusted"].round(2).astype(str),
         mode="markers+text",
         marker=dict(size=8, opacity=0),  # invisible but selectable
         textposition="top center",
         textfont=dict(size=11, color="black", family="Arial"),
         hoverinfo="skip",
-        customdata=dff["country"].tolist(),  # also attach customdata here
+        customdata=df_bm_cy["country"].tolist(),  # also attach customdata here
         selected=dict(marker=dict(opacity=0), textfont=dict(color="black")),
         unselected=dict(marker=dict(opacity=0), textfont=dict(color="black"))
     )
 
     frames.append(go.Frame(
-        data=[choropleth, scatter_text],
+        data=[choropleth, scatter_text, democracy_bubbles],
         name=str(year),
         layout=go.Layout(title_text=f"Big Mac Dollar Prices — {year}")
     ))
@@ -211,7 +234,7 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
     # --- Build the line chart ---
     fig = go.Figure()
     for country in selected_countries:
-        df_country = df[df["country"] == country].sort_values("year")
+        df_country = df_bm[df_bm["country"] == country].sort_values("year")
         fig.add_trace(go.Scatter(
             x=df_country["year"],
             y=df_country["price_adjusted"],
