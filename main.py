@@ -31,10 +31,12 @@ for year in years:
         marker_line_color="white",
         marker_line_width=0.5,
         colorbar=dict(title="Price (USD)"),
-        showscale=True,
         hoverinfo="skip",
         selected=dict(marker=dict(opacity=1)),
-        unselected=dict(marker=dict(opacity=1))
+        unselected=dict(marker=dict(opacity=1)),
+        name="Big Mac Price",
+        showlegend=True,
+        legendgroup="bigmac",
     )
 
     # democracy index as bubis bublé
@@ -50,7 +52,10 @@ for year in years:
         ),
         hoverinfo="skip",
         selected=dict(marker=dict(opacity=0.5)),
-        unselected=dict(marker=dict(opacity=0.5))
+        unselected=dict(marker=dict(opacity=0.5)),
+        name = "Democracy Index",
+        showlegend = (year == years[0]),
+        legendgroup = "democracy"
     )
 
     # an invisible marker per country so selection events are triggered reliably.
@@ -73,7 +78,7 @@ for year in years:
     frames.append(go.Frame(
         data=[choropleth, democracy_bubbles, scatter_text],
         name=str(year),
-        layout=go.Layout(title_text=f"Big Mac Dollar Prices — {year}")
+        layout=go.Layout()
     ))
 
 # initial map figure
@@ -128,7 +133,18 @@ map_fig = go.Figure(
                                     "mode": "immediate",
                                     "transition": {"duration": 200}}]
             ) for year in years]
-        )]
+        )],
+        legend=dict(
+            title="Legend",
+            orientation="v",
+            yanchor="middle",
+            y=0.92,
+            xanchor="right",
+            x=1.01,
+            bgcolor="rgba(255,255,255,0.7)",
+            bordercolor="black",
+            borderwidth=0.5
+        )
     )
 )
 
@@ -150,7 +166,6 @@ app.layout = html.Div([
             "height": "80vh"
         }
     ),
-    dcc.Store(id="last-clicked", data=None),
     dcc.Store(id="selected_countries", data=["Denmark"]),
     html.Div([
         dcc.Graph(id="line-chart"),
@@ -161,46 +176,27 @@ app.layout = html.Div([
 # line chart callback
 @app.callback(
     Output("line-chart", "figure"),
-    Output("last-clicked", "data"),
     Output("selected_countries", "data"),
-    Input("world-map", "selectedData"),
+    Output("world-map", "clickData"),
+    Input("world-map", "clickData"),
     Input("reset-btn", "n_clicks"),
-    State("last-clicked", "data"),
     State("selected_countries", "data"),
 )
 
-def update_line_chart(selectedData, _, last_clicked, selected_countries):
-    # reset behavior
+def update_line_chart(clickData, _, selected_countries):
     if ctx.triggered_id == "reset-btn":
         selected_countries = ["Denmark"]
-        last_clicked = None
-        return build_line_chart(selected_countries), last_clicked, selected_countries
 
-    # a country was selected -- selectedData present
-    elif selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
-        raw = selectedData["points"][0].get("customdata") or selectedData["points"][0].get("location")
+        # Click event
+    elif clickData and "points" in clickData and len(clickData["points"]) > 0:
+        country_clicked = clickData["points"][0]["customdata"][0]
 
-        if isinstance(raw, (list, tuple)):
-            country_clicked = raw[0]
+        if country_clicked in selected_countries:
+            selected_countries.remove(country_clicked)
         else:
-            country_clicked = raw
+            selected_countries.append(country_clicked)
 
-        if country_clicked:
-            # if present remove, else add
-            if country_clicked in selected_countries:
-                selected_countries.remove(country_clicked)
-            else:
-                selected_countries.append(country_clicked)
-            last_clicked = country_clicked
-
-    # selectedData is none so a deselect happened -- use last_clicked to know which to remove
-    else:
-        if last_clicked:
-            if last_clicked in selected_countries:
-                selected_countries.remove(last_clicked)
-            last_clicked = None
-
-    return build_line_chart(selected_countries) ,last_clicked, selected_countries
+    return build_line_chart(selected_countries), selected_countries, None
 
 def build_line_chart(selected_countries):
     fig = go.Figure()
@@ -231,18 +227,16 @@ def build_line_chart(selected_countries):
         xaxis=dict(title="Year"),
         yaxis=dict(
             title="Big Mac Price (USD)",
-            titlefont=dict(color="#E53935"),
             tickfont=dict(color="#E53935"),
-            range=[0, 11],
+            range=[0, 12],
 
         ),
         yaxis2=dict(
             title="Diplomacy Index",
-            titlefont=dict(color="#1E88E5"),
             tickfont=dict(color="#1E88E5"),
             overlaying="y",
             side="right",
-            range=[0, 11] 
+            range=[0, 12]
 
         ),
         legend=dict(
@@ -259,4 +253,4 @@ def build_line_chart(selected_countries):
     return fig
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)
