@@ -2,20 +2,24 @@ import plotly.graph_objects as go
 import DataHandling as dh
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
+# initial data load
 DemocracyIndex = dh.LoadDemocracyIndex()
 BigmacIndex = dh.LoadBigMacIndex()
 
+# merging both datasets to have the same years and countries
 MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
 
+# set the scale
 min_price = MergedIndex["price_adjusted"].min()
 max_price = MergedIndex["price_adjusted"].max()
 
-# --- Create frames --- (add customdata so we reliably know country in callbacks)
+
 years = sorted(int(y) for y in MergedIndex["year"].unique())
 frames = []
 for year in years:
     dff = MergedIndex[MergedIndex["year"] == year]
 
+    # the map with the big mac data
     choropleth = go.Choropleth(
         locations=dff["country"],
         z=dff["price_adjusted"],
@@ -27,64 +31,57 @@ for year in years:
         marker_line_width=0.5,
         colorbar=dict(title="Price (USD)"),
         showscale=True,
-        customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
-        hovertemplate=(
-            "Country: %{customdata[0]}<br>"
-            "Big Mac Price: %{customdata[1]:.2f} USD<br>"
-            "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
-        ),
+        hoverinfo="skip",
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1))
     )
 
-    # --- Democracy Index Bubis Bublé ---
+    # democracy index as bubis bublé
     democracy_bubbles = go.Scattergeo(
         locations=dff["country"],
         locationmode="country names",
         mode="markers",
         marker=dict(
-            size=dff["DIIndex"] * 5,   # scale bubble size
+            size=dff["DIIndex"] * 5,
             color="blue",
             opacity=0.5,
             line=dict(width=0.7, color="white")
         ),
+        hoverinfo="skip",
+        selected=dict(marker=dict(opacity=0.5)),
+        unselected=dict(marker=dict(opacity=0.5))
+    )
+
+    # an invisible marker per country so selection events are triggered reliably.
+    scatter_text = go.Scattergeo(
+        locations=dff["country"],
+        locationmode="country names",
+        mode="markers+text",
+        marker=dict(size=20, opacity=0),  # invisible but selectable
         customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
         hovertemplate=(
             "Country: %{customdata[0]}<br>"
             "Big Mac Price: %{customdata[1]:.2f} USD<br>"
             "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
         ),
-        selected=dict(marker=dict(opacity=0.5)),
-        unselected=dict(marker=dict(opacity=0.5))
-    )
-
-    # Make an invisible marker per country so selection events are triggered reliably.
-    scatter_text = go.Scattergeo(
-        locations=dff["country"],
-        locationmode="country names",
-        mode="markers+text",
-        marker=dict(size=8, opacity=0),  # invisible but selectable
-        textposition="top center",
-        textfont=dict(size=11, color="black", family="Arial"),
-        hoverinfo="skip",
-        customdata=dff["country"].tolist(),  # also attach customdata here
         selected=dict(marker=dict(opacity=0)),
-        unselected=dict(marker=dict(opacity=0))
+        unselected=dict(marker=dict(opacity=0)),
+        showlegend=False,
     )
 
     frames.append(go.Frame(
-        data=[choropleth, scatter_text, democracy_bubbles],
+        data=[choropleth, democracy_bubbles, scatter_text],
         name=str(year),
         layout=go.Layout(title_text=f"Big Mac Dollar Prices — {year}")
     ))
 
-# --- Initial map figure --- (add clickmode to enable select events)
+# initial map figure
 map_fig = go.Figure(
     data=frames[0].data,
     frames=frames,
     layout=go.Layout(
-        title=f"Big Mac Dollar Prices — {years[0]}",
-        clickmode="event+select",  # important: enable selection events
+        title=f"Big Mac Dollar Prices & Democracy Index in {years[0]}",
+        clickmode="event+select",
         geo=dict(showframe=False, showcoastlines=True, projection_type="natural earth"),
         margin=dict(l=0, r=0, t=50, b=0),
         updatemenus=[dict(
@@ -110,7 +107,7 @@ map_fig = go.Figure(
                 dict(
                     label="Reset",
                     method="animate",
-                    args=[[str(years[0])],   # reset to first year
+                    args=[[str(years[0])],
                           {"frame": {"duration": 500, "redraw": True},
                            "mode": "immediate",
                            "transition": {"duration": 300}}]
@@ -136,77 +133,75 @@ map_fig = go.Figure(
 
 initial_map_fig = map_fig
 
-# --- Dash app ---
+# dash app
 app = Dash(__name__)
 
-# store selected countries (server-side simple list) and a store to remember last-clicked country
-selected_countries = ["Denmark"]
-
 app.layout = html.Div([
-    html.H3("Big Mac Index World Wide Comparison"),
+    html.H1("Big Mac Index VS Democracy Ratings World Wide Comparison", style={"textAlign": "center"}),
     html.Div(
         dcc.Graph(id="world-map", figure=map_fig, style={"width": "100%", "height": "100%"}),
         style={
             "display": "flex",
-            "justifyContent": "center",  # centers horizontally
-            "alignItems": "center",  # centers vertically if container has height
+            "justifyContent": "center",
+            "alignItems": "center",
             "flexDirection": "column",
             "width": "100%",
             "height": "80vh"
         }
     ),
-    dcc.Store(id="last-clicked", data=None),  # stores last clicked country so we can handle deselects
+    dcc.Store(id="last-clicked", data=None),
+    dcc.Store(id="selected_countries", data=["Denmark"]),
     html.Div([
         dcc.Graph(id="line-chart"),
         html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
     ])
 ])
 
-
-# --- Line chart callback (multi-country + highlight current year) ---
+# line chart callback
 @app.callback(
     Output("line-chart", "figure"),
     Output("last-clicked", "data"),
+    Output("selected_countries", "data"),
     Input("world-map", "selectedData"),
     Input("reset-btn", "n_clicks"),
     State("last-clicked", "data"),
-    State("world-map", "figure")
+    State("selected_countries", "data"),
 )
-def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state):
-    triggered_input = ctx.triggered_id
 
-    global selected_countries
-
+def update_line_chart(selectedData, _, last_clicked, selected_countries):
     # reset behavior
-    if triggered_input == "reset-btn":
+    if ctx.triggered_id == "reset-btn":
         selected_countries = ["Denmark"]
         last_clicked = None
+        return build_line_chart(selected_countries), last_clicked, selected_countries
 
-    # a country was selected (selectedData present)
+    # a country was selected -- selectedData present
     elif selectedData and "points" in selectedData and len(selectedData["points"]) > 0:
         raw = selectedData["points"][0].get("customdata") or selectedData["points"][0].get("location")
-        # customdata might be a list or a single string
+
         if isinstance(raw, (list, tuple)):
             country_clicked = raw[0]
         else:
             country_clicked = raw
 
         if country_clicked:
-            # toggle: if present remove, else add
+            # if present remove, else add
             if country_clicked in selected_countries:
                 selected_countries.remove(country_clicked)
             else:
                 selected_countries.append(country_clicked)
             last_clicked = country_clicked
 
-    # selectedData is None -> a deselect happened. Use last_clicked to know which to remove.
+    # selectedData is none so a deselect happened -- use last_clicked to know which to remove
     else:
         if last_clicked:
             if last_clicked in selected_countries:
                 selected_countries.remove(last_clicked)
             last_clicked = None
 
-    # --- Build the line chart ---
+    return build_line_chart(selected_countries) ,last_clicked, selected_countries
+
+def build_line_chart(selected_countries):
     fig = go.Figure()
     for country in selected_countries:
         df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
@@ -218,13 +213,12 @@ def update_line_chart(selectedData, n_clicks, last_clicked, world_map_fig_state)
         ))
 
     fig.update_layout(
-        title="Big Mac Prices Over Time -- Click a country to compare",
+        title="Historical Data of Selected countries -- Click a country to compare",
         xaxis_title="Year",
         yaxis_title="Price (USD)",
         showlegend=True
     )
-
-    return fig, last_clicked
+    return fig
 
 if __name__ == "__main__":
     app.run(debug=False)
