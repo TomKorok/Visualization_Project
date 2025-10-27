@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 import DataHandling as dh
+import plotly.express as px
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
 # initial data load
@@ -203,21 +204,58 @@ def update_line_chart(selectedData, _, last_clicked, selected_countries):
 
 def build_line_chart(selected_countries):
     fig = go.Figure()
+    color_map = px.colors.qualitative.Plotly
+    country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
     for country in selected_countries:
         df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
+        color = country_colors[country]
         fig.add_trace(go.Scatter(
             x=df_country["year"],
             y=df_country["price_adjusted"],
             mode="lines+markers",
-            name=country
+            name=f"{country} - Big Mac Price",
+            yaxis="y1",
+            line=dict(width=2, color=color)
+        ))
+        fig.add_trace(go.Scatter(
+            x=df_country["year"],
+            y=df_country["DIIndex"],
+            mode="lines+markers",
+            name=f"{country} - Diplomacy Index",
+            yaxis="y2",
+            line=dict(width=2, dash="dot", color=color)
         ))
 
     fig.update_layout(
-        title="Historical Data of Selected countries -- Click a country to compare",
-        xaxis_title="Year",
-        yaxis_title="Price (USD)",
-        showlegend=True
-    )
+        title="Big Mac Price vs Diplomacy Index Over Time",
+        xaxis=dict(title="Year"),
+        yaxis=dict(
+            title="Big Mac Price (USD)",
+            titlefont=dict(color="#E53935"),
+            tickfont=dict(color="#E53935"),
+            range=[0, 11],
+
+        ),
+        yaxis2=dict(
+            title="Diplomacy Index",
+            titlefont=dict(color="#1E88E5"),
+            tickfont=dict(color="#1E88E5"),
+            overlaying="y",
+            side="right",
+            range=[0, 11] 
+
+        ),
+        legend=dict(
+            x=1.05,  # push slightly outside the plotting area
+            y=1,     # align to top
+            xanchor="left",
+            yanchor="top",
+            bgcolor="rgba(255,255,255,0.7)",
+            bordercolor="rgba(0,0,0,0.1)",
+            borderwidth=1
+        ),
+        template="plotly_white",
+        margin=dict(r=150))
     return fig
 
 if __name__ == "__main__":
