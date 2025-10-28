@@ -30,12 +30,12 @@ for year in years:
         colorscale="Reds",
         marker_line_color="white",
         marker_line_width=0.5,
-        colorbar=dict(title="Price (USD)"),
         hoverinfo="skip",
         selected=dict(marker=dict(opacity=1)),
         unselected=dict(marker=dict(opacity=1)),
-        name="Big Mac Price",
         showlegend=True,
+        showscale=False,
+        name = f"Big Mac Price [{min_price:.2f} - {max_price:.2f}]",
         legendgroup="bigmac",
     )
 
@@ -53,7 +53,7 @@ for year in years:
         hoverinfo="skip",
         selected=dict(marker=dict(opacity=0.5)),
         unselected=dict(marker=dict(opacity=0.5)),
-        name = "Democracy Index",
+        name = "Democracy Index [0 - 10]",
         showlegend = (year == years[0]),
         legendgroup = "democracy"
     )
