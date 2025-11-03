@@ -6,9 +6,14 @@ from dash import Dash, dcc, html, Output, Input, State, ctx
 # initial data load
 DemocracyIndex = dh.LoadDemocracyIndex()
 BigmacIndex = dh.LoadBigMacIndex()
+GDPCountry = dh.LoadGDPCountry()
+GDPCapita = dh.LoadGDPCapita()
+
+
+dataframes = [DemocracyIndex, BigmacIndex, GDPCountry, GDPCapita] 
 
 # merging both datasets to have the same years and countries
-MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
+MergedIndex = dh.MergeDataFrames(dataframes)
 
 # set the scale
 min_price = MergedIndex["price_adjusted"].min()
@@ -54,7 +59,7 @@ for year in years:
         selected=dict(marker=dict(opacity=0.5)),
         unselected=dict(marker=dict(opacity=0.5)),
         name = "Democracy Index [0 - 10]",
-        showlegend = (year == years[0]),
+        showlegend = True,
         legendgroup = "democracy"
     )
 
