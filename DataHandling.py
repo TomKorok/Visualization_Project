@@ -85,6 +85,7 @@ def LoadGDPCapita():
     df_long['value'] = pd.to_numeric(df_long['value'], errors='coerce')
     df_long = df_long.dropna(subset=['value'])
 
+    df_long = df_long[df_long["year"] >= 2000]
     df_long.rename(columns={"Country Name": "country", "value": "GDPCapitaValue"}, inplace=True)
 
     df_long = df_long.sort_values(["country", "year"]).reset_index(drop=True)
@@ -92,7 +93,7 @@ def LoadGDPCapita():
     return df_long
 
 def MergeDataFrames(dfs):
-    merged_df = reduce(lambda left, right: pd.merge(left, right, on=['country', 'year'], how='inner'), dfs )
+    merged_df = reduce(lambda left, right: pd.merge(left, right, on=['country', 'year'], how='outer'), dfs )
     return merged_df
 
 def test():

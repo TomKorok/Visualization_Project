@@ -19,149 +19,120 @@ MergedIndex = dh.MergeDataFrames(dataframes)
 min_price = MergedIndex["price_adjusted"].min()
 max_price = MergedIndex["price_adjusted"].max()
 
-
 years = sorted(int(y) for y in MergedIndex["year"].unique())
-frames = []
-for year in years:
-    dff = MergedIndex[MergedIndex["year"] == year]
-
-    # the map with the big mac data
-    choropleth = go.Choropleth(
-        locations=dff["country"],
-        z=dff["price_adjusted"],
-        locationmode="country names",
-        zmin=min_price,
-        zmax=max_price,
-        colorscale="Reds",
-        marker_line_color="white",
-        marker_line_width=0.5,
-        hoverinfo="skip",
-        selected=dict(marker=dict(opacity=1)),
-        unselected=dict(marker=dict(opacity=1)),
-        showlegend=True,
-        showscale=False,
-        name = f"Big Mac Price [{min_price:.2f} - {max_price:.2f}]",
-        legendgroup="bigmac",
-    )
-
-    # democracy index as bubis bublé
-    democracy_bubbles = go.Scattergeo(
-        locations=dff["country"],
-        locationmode="country names",
-        mode="markers",
-        marker=dict(
-            size=dff["DIIndex"] * 5,
-            color="blue",
-            opacity=0.5,
-            line=dict(width=0.7, color="white")
-        ),
-        hoverinfo="skip",
-        selected=dict(marker=dict(opacity=0.5)),
-        unselected=dict(marker=dict(opacity=0.5)),
-        name = "Democracy Index [0 - 10]",
-        showlegend = True,
-        legendgroup = "democracy"
-    )
-
-    # an invisible marker per country so selection events are triggered reliably.
-    scatter_text = go.Scattergeo(
-        locations=dff["country"],
-        locationmode="country names",
-        mode="markers+text",
-        marker=dict(size=20, opacity=0),  # invisible but selectable
-        customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
-        hovertemplate=(
-            "Country: %{customdata[0]}<br>"
-            "Big Mac Price: %{customdata[1]:.2f} USD<br>"
-            "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
-        ),
-        selected=dict(marker=dict(opacity=0)),
-        unselected=dict(marker=dict(opacity=0)),
-        showlegend=False,
-    )
-
-    frames.append(go.Frame(
-        data=[choropleth, democracy_bubbles, scatter_text],
-        name=str(year),
-        layout=go.Layout()
-    ))
+# prefixed colour based on the column name in the MergedIndex
+colours = {
+    "price_adjusted": 'Red',
+    "DIIndex" : 'Blue'
+}
+# prefixed legend names based on the column name in the MergedIndex
+legend_names = {
+    "price_adjusted": f"Big Mac Price [{min_price:.2f} - {max_price:.2f}]",
+    "DIIndex": "Democracy Index [0 - 10]"
+}
+# prefixed chart names based on the column name in the MergedIndex
+chart_names = {
+    "price_adjusted": 'Big Mac Price',
+    "DIIndex": "Democracy Index"
+}
 
 # initial map figure
-map_fig = go.Figure(
-    data=frames[0].data,
-    frames=frames,
-    layout=go.Layout(
-        title=f"Big Mac Dollar Prices & Democracy Index in {years[0]}",
-        clickmode="event+select",
-        geo=dict(showframe=False, showcoastlines=True, projection_type="natural earth"),
-        margin=dict(l=0, r=0, t=50, b=0),
-        updatemenus=[dict(
-            type="buttons",
-            showactive=False,
-            x=0.05, y=0.95,
-            xanchor="left", yanchor="top",
-            buttons=[
-                dict(
-                    label="Play",
+def build_map(frames=None, selected_index_1=None, selected_index_2=None, year=None):
+    return go.Figure(
+        data= frames[0].data if frames is not None else None,
+        frames=frames,
+        layout=go.Layout(
+            title=frames[0].layout.title.text if frames else "",
+            clickmode="event+select",
+            geo=dict(showframe=False, showcoastlines=True, projection_type="natural earth"),
+            margin=dict(l=0, r=0, t=50, b=0),
+            updatemenus=[dict(
+                type="buttons",
+                showactive=False,
+                x=0.05, y=0.95,
+                xanchor="left", yanchor="top",
+                buttons=[
+                    dict(
+                        label="Play",
+                        method="animate",
+                        args=[None, {"frame": {"duration": 1000, "redraw": True},
+                                     "fromcurrent": True,
+                                     "transition": {"duration": 300, "easing": "linear"}}]
+                    ),
+                    dict(
+                        label="Pause",
+                        method="animate",
+                        args=[[None], {"frame": {"duration": 0, "redraw": False},
+                                       "mode": "immediate",
+                                       "transition": {"duration": 0}}]
+                    ),
+                    dict(
+                        label="Reset",
+                        method="animate",
+                        args=[[str(years[0])],
+                              {"frame": {"duration": 500, "redraw": True},
+                               "mode": "immediate",
+                               "transition": {"duration": 300}}]
+                    )
+                ]
+            )],
+            sliders=[dict(
+                active=0,
+                x=0.5,
+                xanchor="center",
+                len=0.9,
+                pad={"t": 50, "b": 20},  #
+                steps=[dict(
+                    label=str(year),
                     method="animate",
-                    args=[None, {"frame": {"duration": 1000, "redraw": True},
-                                 "fromcurrent": True,
-                                 "transition": {"duration": 300, "easing": "linear"}}]
-                ),
-                dict(
-                    label="Pause",
-                    method="animate",
-                    args=[[None], {"frame": {"duration": 0, "redraw": False},
-                                   "mode": "immediate",
-                                   "transition": {"duration": 0}}]
-                ),
-                dict(
-                    label="Reset",
-                    method="animate",
-                    args=[[str(years[0])],
-                          {"frame": {"duration": 500, "redraw": True},
-                           "mode": "immediate",
-                           "transition": {"duration": 300}}]
-                )
-            ]
-        )],
-        sliders=[dict(
-            active=0,
-            x=0.5,
-            xanchor="center",
-            len=0.9,
-            pad={"t": 50, "b": 20},  #
-            steps=[dict(
-                label=str(year),
-                method="animate",
-                args=[[str(year)], {"frame": {"duration": 300, "redraw": True},
-                                    "mode": "immediate",
-                                    "transition": {"duration": 200}}]
-            ) for year in years]
-        )],
-        legend=dict(
-            title="Legend",
-            orientation="v",
-            yanchor="middle",
-            y=0.92,
-            xanchor="right",
-            x=1.01,
-            bgcolor="rgba(255,255,255,0.7)",
-            bordercolor="black",
-            borderwidth=0.5
+                    args=[[str(year)], {"frame": {"duration": 300, "redraw": True},
+                                        "mode": "immediate",
+                                        "transition": {"duration": 200}}]
+                ) for year in years]
+            )],
+            legend=dict(
+                title="Legend",
+                orientation="v",
+                yanchor="middle",
+                y=0.92,
+                xanchor="right",
+                x=1.01,
+                bgcolor="rgba(255,255,255,0.7)",
+                bordercolor="black",
+                borderwidth=0.5
+            )
         )
     )
-)
-
-initial_map_fig = map_fig
 
 # dash app
 app = Dash(__name__)
 
 app.layout = html.Div([
     html.H1("Big Mac Index VS Democracy Ratings World Wide Comparison", style={"textAlign": "center"}),
+
+    html.Div([
+        html.Label("Select up to 2 Indexes:", style={"fontWeight": "bold"}),
+        dcc.Dropdown(
+            id="index-dropdown",
+            options=[
+                {"label": "Big Mac Index", "value": "price_adjusted"},
+                {"label": "Democracy Index", "value": "DIIndex"},
+                {"label": "Test", "value": ""},
+            ],
+            value=[],  # default selection
+            multi=True,
+            maxHeight=300,
+            style={"width": "60%"}
+        )
+    ], style={
+        "display": "flex",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "padding": "10px"
+    }),
+
     html.Div(
-        dcc.Graph(id="world-map", figure=map_fig, style={"width": "100%", "height": "100%"}),
+        dcc.Graph(id="world-map", figure=build_map(), style={"width": "100%", "height": "100%"}),
         style={
             "display": "flex",
             "justifyContent": "center",
@@ -172,11 +143,117 @@ app.layout = html.Div([
         }
     ),
     dcc.Store(id="selected_countries", data=["Denmark"]),
+    dcc.Store(id="selected_index_1"),
+    dcc.Store(id="selected_index_2"),
+
     html.Div([
         dcc.Graph(id="line-chart"),
         html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
     ])
 ])
+
+@app.callback(
+    Output("world-map", "figure"),
+    Input("selected_index_1", "data"),
+    Input("selected_index_2", "data")
+)
+def update_map(selected_index_1, selected_index_2):
+    frames = []
+    for year in years:
+        dff = MergedIndex[MergedIndex["year"] == year]
+        data = []
+
+        title_text = f"{chart_names[selected_index_1] if selected_index_1 else ''}" \
+                     f"{' & ' + chart_names[selected_index_2] if selected_index_2 else ''}" \
+                     f"{' in ' + str(year) if selected_index_1 is not None or selected_index_2 is not None else ''}"
+
+
+        # the map with the big mac data
+        if selected_index_1 in dff.columns and selected_index_1 is not None:
+            choropleth = go.Choropleth(
+                locations=dff["country"],
+                z=dff[selected_index_1],
+                locationmode="country names",
+                zmin=min_price,
+                zmax=max_price,
+                colorscale=colours[selected_index_1] + "s",
+                marker_line_color="white",
+                marker_line_width=0.5,
+                hoverinfo="skip",
+                selected=dict(marker=dict(opacity=1)),
+                unselected=dict(marker=dict(opacity=1)),
+                showlegend=True,
+                showscale=False,
+                name = legend_names[selected_index_1],
+            )
+            data.append(choropleth)
+
+        # democracy index as bubis bublé
+        if selected_index_2 in dff.columns and selected_index_2 is not None:
+            bubbles = go.Scattergeo(
+                locations=dff["country"],
+                locationmode="country names",
+                mode="markers",
+                marker=dict(
+                    size=dff[selected_index_2] * 5,
+                    color=colours[selected_index_2],
+                    opacity=0.5,
+                    line=dict(width=0.7, color="white")
+                ),
+                hoverinfo="skip",
+                selected=dict(marker=dict(opacity=0.5)),
+                unselected=dict(marker=dict(opacity=0.5)),
+                name = legend_names[selected_index_2],
+                showlegend = True,
+            )
+            data.append(bubbles)
+
+        # an invisible marker per country so selection events are triggered reliably.
+        scatter_text = go.Scattergeo(
+            locations=dff["country"],
+            locationmode="country names",
+            mode="markers+text",
+            marker=dict(size=20, opacity=0),  # invisible but selectable
+            customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
+            hovertemplate=(
+                "Country: %{customdata[0]}<br>"
+                "Big Mac Price: %{customdata[1]:.2f} USD<br>"
+                "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
+            ),
+            selected=dict(marker=dict(opacity=0)),
+            unselected=dict(marker=dict(opacity=0)),
+            showlegend=False,
+        )
+        data.append(scatter_text)
+
+        frames.append(go.Frame(
+            data=data,
+            name=str(year),
+            layout=go.Layout(
+                title_text = title_text,
+            )
+        ))
+    return build_map(frames, selected_index_1, selected_index_2)
+
+@app.callback(
+    Output("index-dropdown", "value"),          # updates UI display
+    Output("selected_index_1", "data"),         # updates internal store 1
+    Output("selected_index_2", "data"),         # updates internal store 2
+    Input("index-dropdown", "value"),
+)
+def update_selected_indexes(selected_values):
+    if not selected_values:
+        return [], None, None
+
+    # Keep only the first 2 selections
+    limited_values = selected_values[:2]
+
+    # Handle cases for stores
+    if len(limited_values) == 1:
+        return limited_values, limited_values[0], None
+    else:
+        return limited_values, limited_values[0], limited_values[1]
+
 
 # line chart callback
 @app.callback(
