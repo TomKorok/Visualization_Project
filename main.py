@@ -166,12 +166,12 @@ def update_map(selected_indices):
 
         # dynamic title text
         title_text = ''
-        if len(selected_indices) > 0:
-            title_text += chart_names[selected_indices[0]]
-        if len(selected_indices) > 1:
-            title_text += ' & ' + chart_names[selected_indices[1]]
-        if selected_indices:
-            title_text += f' in {year}'
+        for i in range(len(selected_indices)):
+            title_text += chart_names[selected_indices[i]]
+            if i != len(selected_indices) - 1:
+                title_text += " & "
+            else:
+                title_text += f' in {year}'
 
         # first selected index on the map
         if len(selected_indices) > 0 and selected_indices[0] in dff.columns:
@@ -278,60 +278,87 @@ def update_line_chart(clickData, _, selected_indices, selected_countries):
         else:
             selected_countries.append(country_clicked)
 
-    return build_line_chart(selected_countries), selected_countries, None
+    return build_line_chart(selected_countries, selected_indices), selected_countries, None
 
-def build_line_chart(selected_countries):
+def build_line_chart(selected_countries, selected_indices):
     fig = go.Figure()
     color_map = px.colors.qualitative.Plotly
     country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
     for country in selected_countries:
         df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
         color = country_colors[country]
-        fig.add_trace(go.Scatter(
-            x=df_country["year"],
-            y=df_country["price_adjusted"],
-            mode="lines+markers",
-            name=f"{country} - Big Mac Price",
-            yaxis="y1",
-            line=dict(width=2, color=color)
-        ))
-        fig.add_trace(go.Scatter(
-            x=df_country["year"],
-            y=df_country["DIIndex"],
-            mode="lines+markers",
-            name=f"{country} - Diplomacy Index",
-            yaxis="y2",
-            line=dict(width=2, dash="dot", color=color)
-        ))
+        if len(selected_indices) > 0:
+            fig.add_trace(go.Scatter(
+                x=df_country["year"],
+                y=df_country[selected_indices[0]],
+                mode="lines+markers",
+                name=f"{country} - {chart_names[selected_indices[0]]}",
+                yaxis="y1",
+                line=dict(width=2, color=color),
+                showlegend=True
+            ))
+        if len(selected_indices) > 1:
+            fig.add_trace(go.Scatter(
+                x=df_country["year"],
+                y=df_country[selected_indices[1]],
+                mode="lines+markers",
+                name=f"{country} - {chart_names[selected_indices[1]]}",
+                yaxis="y2",
+                line=dict(width=2, dash="dot", color=color),
+                showlegend=True
+            ))
 
-    fig.update_layout(
-        title="Big Mac Price vs Diplomacy Index Over Time",
-        xaxis=dict(title="Year"),
-        yaxis=dict(
-            title="Big Mac Price (USD)",
-            tickfont=dict(color="#E53935"),
-            range=[0, 12],
+    # dynamic title text
+    title_text = ''
+    if len(selected_indices) > 0:
+        title_text += chart_names[selected_indices[0]]
+    if len(selected_indices) > 1:
+        title_text += " & " + chart_names[selected_indices[1]]
+    if len(selected_indices) > 0:
+        title_text += " Over Time"
 
-        ),
-        yaxis2=dict(
-            title="Diplomacy Index",
-            tickfont=dict(color="#1E88E5"),
-            overlaying="y",
-            side="right",
-            range=[0, 12]
+    if len(selected_indices) > 0:
+        layout_kwargs = dict(
+            title=title_text,
+            xaxis=dict(title="Year"),
+            yaxis=dict(
+                title=chart_names[selected_indices[0]],
+                tickfont=dict(color="black"),
+                range=[0, 12],
+            ),
+            legend=dict(
+                x=1.05,
+                y=1,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.7)",
+                bordercolor="rgba(0,0,0,0.1)",
+                borderwidth=1
+            ),
+            template="plotly_white",
+            margin=dict(r=150)
+        )
 
-        ),
-        legend=dict(
-            x=1.05,  # push slightly outside the plotting area
-            y=1,     # align to top
-            xanchor="left",
-            yanchor="top",
-            bgcolor="rgba(255,255,255,0.7)",
-            bordercolor="rgba(0,0,0,0.1)",
-            borderwidth=1
-        ),
-        template="plotly_white",
-        margin=dict(r=150))
+        # Only add yaxis2 if there's a second selected index
+        if len(selected_indices) > 1:
+            layout_kwargs['yaxis2'] = dict(
+                title=chart_names[selected_indices[1]],
+                tickfont=dict(color="black"),
+                overlaying="y",
+                side="right",
+                range=[0, 12]
+            )
+
+        # Apply layout
+        fig.update_layout(**layout_kwargs)
+    else:
+        # Fallback if no selected indices
+        fig.update_layout(
+            title=title_text,
+            xaxis=dict(title="Year"),
+            template="plotly_white",
+            margin=dict(r=150)
+        )
     return fig
 
 if __name__ == "__main__":
