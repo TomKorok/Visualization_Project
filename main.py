@@ -3,16 +3,15 @@ import DataHandling as dh
 import plotly.express as px
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
+# the amount of indexes allowed through the app:
+max_displayed_indexes = 2
+
 # initial data load
 DemocracyIndex = dh.LoadDemocracyIndex()
 BigmacIndex = dh.LoadBigMacIndex()
 
 # merging both datasets to have the same years and countries
 MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
-
-# set the scale
-min_price = MergedIndex["price_adjusted"].min()
-max_price = MergedIndex["price_adjusted"].max()
 
 years = sorted(int(y) for y in MergedIndex["year"].unique())
 # prefixed colour based on the column name in the MergedIndex
@@ -22,7 +21,7 @@ colours = {
 }
 # prefixed legend names based on the column name in the MergedIndex
 legend_names = {
-    "price_adjusted": f"Big Mac Price [{min_price:.2f} - {max_price:.2f}]",
+    "price_adjusted": f"Big Mac Price [{MergedIndex["price_adjusted"].min():.2f} - {MergedIndex["price_adjusted"].max():.2f}]",
     "DIIndex": "Democracy Index [0 - 10]"
 }
 # prefixed chart names based on the column name in the MergedIndex
@@ -30,9 +29,18 @@ chart_names = {
     "price_adjusted": 'Big Mac Price',
     "DIIndex": "Democracy Index"
 }
+#prefixed data for hovering
+hover_data_1 = {
+    "price_adjusted": "%{customdata[",
+    "DIIndex": "%{customdata["
+}
+hover_data_2 = {
+    "price_adjusted": "]:.2f} USD",
+    "DIIndex": "]:.2f}"
+}
 
 # initial map figure
-def build_map(frames=None, selected_index_1=None, selected_index_2=None, year=None):
+def build_map(frames=None):
     return go.Figure(
         data= frames[0].data if frames is not None else None,
         frames=frames,
@@ -138,8 +146,7 @@ app.layout = html.Div([
         }
     ),
     dcc.Store(id="selected_countries", data=["Denmark"]),
-    dcc.Store(id="selected_index_1"),
-    dcc.Store(id="selected_index_2"),
+    dcc.Store(id="selected_indices"),
 
     html.Div([
         dcc.Graph(id="line-chart"),
@@ -149,29 +156,32 @@ app.layout = html.Div([
 
 @app.callback(
     Output("world-map", "figure"),
-    Input("selected_index_1", "data"),
-    Input("selected_index_2", "data")
+    Input("selected_indices", "data"),
 )
-def update_map(selected_index_1, selected_index_2):
+def update_map(selected_indices):
     frames = []
     for year in years:
         dff = MergedIndex[MergedIndex["year"] == year]
         data = []
 
-        title_text = f"{chart_names[selected_index_1] if selected_index_1 else ''}" \
-                     f"{' & ' + chart_names[selected_index_2] if selected_index_2 else ''}" \
-                     f"{' in ' + str(year) if selected_index_1 is not None or selected_index_2 is not None else ''}"
+        # dynamic title text
+        title_text = ''
+        if len(selected_indices) > 0:
+            title_text += chart_names[selected_indices[0]]
+        if len(selected_indices) > 1:
+            title_text += ' & ' + chart_names[selected_indices[1]]
+        if selected_indices:
+            title_text += f' in {year}'
 
-
-        # the map with the big mac data
-        if selected_index_1 in dff.columns and selected_index_1 is not None:
+        # first selected index on the map
+        if len(selected_indices) > 0 and selected_indices[0] in dff.columns:
             choropleth = go.Choropleth(
                 locations=dff["country"],
-                z=dff[selected_index_1],
+                z=dff[selected_indices[0]],
                 locationmode="country names",
-                zmin=min_price,
-                zmax=max_price,
-                colorscale=colours[selected_index_1] + "s",
+                zmin=dff[selected_indices[0]].min(),
+                zmax=dff[selected_indices[0]].max(),
+                colorscale=colours[selected_indices[0]] + "s",
                 marker_line_color="white",
                 marker_line_width=0.5,
                 hoverinfo="skip",
@@ -179,42 +189,48 @@ def update_map(selected_index_1, selected_index_2):
                 unselected=dict(marker=dict(opacity=1)),
                 showlegend=True,
                 showscale=False,
-                name = legend_names[selected_index_1],
+                name = legend_names[selected_indices[0]],
             )
             data.append(choropleth)
 
-        # democracy index as bubis bublé
-        if selected_index_2 in dff.columns and selected_index_2 is not None:
-            bubbles = go.Scattergeo(
-                locations=dff["country"],
-                locationmode="country names",
-                mode="markers",
-                marker=dict(
-                    size=dff[selected_index_2] * 5,
-                    color=colours[selected_index_2],
-                    opacity=0.5,
-                    line=dict(width=0.7, color="white")
-                ),
-                hoverinfo="skip",
-                selected=dict(marker=dict(opacity=0.5)),
-                unselected=dict(marker=dict(opacity=0.5)),
-                name = legend_names[selected_index_2],
-                showlegend = True,
-            )
-            data.append(bubbles)
+        # every other index as bubis bublé
+        for i in range(1, len(selected_indices)):
+            if selected_indices[i] in dff.columns:
+                bubbles = go.Scattergeo(
+                    locations=dff["country"],
+                    locationmode="country names",
+                    mode="markers",
+                    marker=dict(
+                        size=dff[selected_indices[i]] * 5,
+                        color=colours[selected_indices[i]],
+                        opacity=0.5,
+                        line=dict(width=0.7, color="white")
+                    ),
+                    hoverinfo="skip",
+                    selected=dict(marker=dict(opacity=0.5)),
+                    unselected=dict(marker=dict(opacity=0.5)),
+                    name = legend_names[selected_indices[i]],
+                    showlegend = True,
+                )
+                data.append(bubbles)
 
+        #building custom data
+        custom_data = ["country"]
+        custom_data.extend(selected_indices)
+
+        #building hover info
+        hover_info = "Country: %{customdata[0]}<br>"
+        for index in selected_indices:
+            hover_info += chart_names[index] + " " + hover_data_1[index] + str(selected_indices.index(index) + 1) + hover_data_2[index] + "<br>"
+        hover_info += "<extra></extra>"
         # an invisible marker per country so selection events are triggered reliably.
         scatter_text = go.Scattergeo(
             locations=dff["country"],
             locationmode="country names",
             mode="markers+text",
             marker=dict(size=20, opacity=0),  # invisible but selectable
-            customdata=dff[["country", "price_adjusted", "DIIndex"]].values,
-            hovertemplate=(
-                "Country: %{customdata[0]}<br>"
-                "Big Mac Price: %{customdata[1]:.2f} USD<br>"
-                "Democracy Index: %{customdata[2]:.2f}<extra></extra>"
-            ),
+            customdata=dff[custom_data].values,
+            hovertemplate=hover_info, # also this invisible layer handles hoverinfo to make it consistent
             selected=dict(marker=dict(opacity=0)),
             unselected=dict(marker=dict(opacity=0)),
             showlegend=False,
@@ -228,26 +244,15 @@ def update_map(selected_index_1, selected_index_2):
                 title_text = title_text,
             )
         ))
-    return build_map(frames, selected_index_1, selected_index_2)
+    return build_map(frames)
 
 @app.callback(
     Output("index-dropdown", "value"),          # updates UI display
-    Output("selected_index_1", "data"),         # updates internal store 1
-    Output("selected_index_2", "data"),         # updates internal store 2
+    Output("selected_indices", "data"),         # updates internal selection store
     Input("index-dropdown", "value"),
 )
 def update_selected_indexes(selected_values):
-    if not selected_values:
-        return [], None, None
-
-    # Keep only the first 2 selections
-    limited_values = selected_values[:2]
-
-    # Handle cases for stores
-    if len(limited_values) == 1:
-        return limited_values, limited_values[0], None
-    else:
-        return limited_values, limited_values[0], limited_values[1]
+    return selected_values[:max_displayed_indexes], selected_values[:max_displayed_indexes]
 
 
 # line chart callback
@@ -257,14 +262,14 @@ def update_selected_indexes(selected_values):
     Output("world-map", "clickData"),
     Input("world-map", "clickData"),
     Input("reset-btn", "n_clicks"),
+    Input("selected_indices", "data"),
     State("selected_countries", "data"),
 )
 
-def update_line_chart(clickData, _, selected_countries):
+def update_line_chart(clickData, _, selected_indices, selected_countries):
     if ctx.triggered_id == "reset-btn":
         selected_countries = ["Denmark"]
-
-        # Click event
+    # Click event
     elif clickData and "points" in clickData and len(clickData["points"]) > 0:
         country_clicked = clickData["points"][0]["customdata"][0]
 
