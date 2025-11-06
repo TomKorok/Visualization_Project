@@ -1,7 +1,7 @@
-import plotly.graph_objects as go
+from pandas.core.indexes.api import all_indexes_same
+
 import DataHandling as dh
 import Builder as b
-import MetaData as md
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
 # the amount of indexes allowed through the app:
@@ -10,7 +10,7 @@ max_displayed_indexes = 2
 merged_df = dh.get_merged_df()
 #get the years
 years = sorted(int(y) for y in merged_df["year"].unique())
-
+all_indexes = ["price_adjusted", "DIIndex"]
 # dash app
 app = Dash(__name__)
 
@@ -49,8 +49,10 @@ app.layout = html.Div([
             "height": "80vh"
         }
     ),
-    dcc.Store(id="selected_countries", data=["Denmark"]),
-    dcc.Store(id="selected_indices"),
+    dcc.Store(id="selected_countries_line", data=["Denmark"]),
+    dcc.Store(id="selected_countries_bar"
+                 "", data=["Denmark"]),
+    dcc.Store(id="selected_indexes"),
     dcc.Dropdown(
         id="chart-selector",
         options=[
@@ -62,7 +64,7 @@ app.layout = html.Div([
     ),
     html.Div([
         dcc.Graph(id="line-chart"),
-        html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
+        html.Button("Reset Line Chart", id="reset-btn-line", n_clicks=0, className="plotly-btn")
     ],
     id="line-container",
     style={"display": "none"}
@@ -70,7 +72,7 @@ app.layout = html.Div([
     html.Div(
         [
             dcc.Graph(id="bar-chart"),
-            html.Button("Reset Bar Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
+            html.Button("Reset Bar Chart", id="reset-btn-bar", n_clicks=0, className="plotly-btn")
         ],
         id="bar-container",
         style={"display": "none"}
@@ -82,7 +84,7 @@ app.layout = html.Div([
     Output("bar-container", "style"),
     Input("chart-selector", "value")
 )
-def display_selected_chart(selected_chart):
+def update_selected_charts(selected_chart):
     # Default hidden
     styles = [{"display": "none"}] * 2 #scale with charts
 
@@ -95,137 +97,56 @@ def display_selected_chart(selected_chart):
 
 @app.callback(
     Output("world-map", "figure"),
-    Input("selected_indices", "data"),
+    Input("selected_indexes", "data"),
 )
-def update_map(selected_indices):
-    frames = []
-    for year in years:
-        dff = merged_df[merged_df["year"] == year]
-        data = []
-
-        # dynamic title text
-        title_text = ''
-        for i in range(len(selected_indices)):
-            title_text += md.chart_names[selected_indices[i]]
-            if i != len(selected_indices) - 1:
-                title_text += " & "
-            else:
-                title_text += f' in {year}'
-
-        # first selected index on the map
-        if len(selected_indices) > 0 and selected_indices[0] in dff.columns:
-            choropleth = go.Choropleth(
-                locations=dff["country"],
-                z=dff[selected_indices[0]],
-                locationmode="country names",
-                zmin=dff[selected_indices[0]].min(),
-                zmax=dff[selected_indices[0]].max(),
-                colorscale=md.colours[selected_indices[0]] + "s",
-                marker_line_color="white",
-                marker_line_width=0.5,
-                hoverinfo="skip",
-                selected=dict(marker=dict(opacity=1)),
-                unselected=dict(marker=dict(opacity=1)),
-                showlegend=True,
-                showscale=False,
-                name = md.legend_names[selected_indices[0]],
-            )
-            data.append(choropleth)
-
-        # every other index as bubis bublé
-        for i in range(1, len(selected_indices)):
-            if selected_indices[i] in dff.columns:
-                bubbles = go.Scattergeo(
-                    locations=dff["country"],
-                    locationmode="country names",
-                    mode="markers",
-                    marker=dict(
-                        size=dff[selected_indices[i]] * 5,
-                        color=md.colours[selected_indices[i]],
-                        opacity=0.5,
-                        line=dict(width=0.7, color="white")
-                    ),
-                    hoverinfo="skip",
-                    selected=dict(marker=dict(opacity=0.5)),
-                    unselected=dict(marker=dict(opacity=0.5)),
-                    name = md.legend_names[selected_indices[i]],
-                    showlegend = True,
-                )
-                data.append(bubbles)
-
-        #building custom data
-        custom_data = ["country"]
-        custom_data.extend(selected_indices)
-
-        #building hover info
-        hover_info = "Country: %{customdata[0]}<br>"
-        for index in selected_indices:
-            hover_info += md.chart_names[index] + " " + md.hover_data_1[index] + str(selected_indices.index(index) + 1) + md.hover_data_2[index] + "<br>"
-        hover_info += "<extra></extra>"
-        # an invisible marker per country so selection events are triggered reliably.
-        scatter_text = go.Scattergeo(
-            locations=dff["country"],
-            locationmode="country names",
-            mode="markers+text",
-            marker=dict(size=20, opacity=0),  # invisible but selectable
-            customdata=dff[custom_data].values,
-            hovertemplate=hover_info, # also this invisible layer handles hoverinfo to make it consistent
-            selected=dict(marker=dict(opacity=0)),
-            unselected=dict(marker=dict(opacity=0)),
-            showlegend=False,
-        )
-        data.append(scatter_text)
-
-        frames.append(go.Frame(
-            data=data,
-            name=str(year),
-            layout=go.Layout(
-                title_text = title_text,
-            )
-        ))
-    return b.build_map(frames=frames, years=years)
+def update_map(selected_indexes):
+    return b.build_map(frames=b.build_map_info(years, merged_df, selected_indexes), years=years)
 
 @app.callback(
-    Output("index-dropdown", "value"),          # updates UI display
-    Output("selected_indices", "data"),         # updates internal selection store
+    Output("index-dropdown", "value"),              # updates UI display
+    Output("selected_indexes", "data"),                 # updates internal selection store
     Input("index-dropdown", "value"),
 )
 def update_selected_indexes(selected_values):
-    return selected_values[:max_displayed_indexes], selected_values[:max_displayed_indexes]
+    return selected_values[:max_displayed_indexes], selected_values[:max_displayed_indexes] #returns as much selected as much is allowed
 
 
 # line chart callback
 @app.callback(
     Output("line-chart", "figure"),
-    Output("selected_countries", "data"),
+    Output("selected_countries_line", "data"),
+    Output("selected_countries_bar", "data"),
     Output("world-map", "clickData"),
     Input("world-map", "clickData"),
-    Input("reset-btn", "n_clicks"),
-    Input("selected_indices", "data"),
+    Input("reset-btn-line", "n_clicks"),
+    Input("reset-btn-bar", "n_clicks"),
+    Input("selected_indexes", "data"),
     Input("chart-selector", "value"),
-    State("selected_countries", "data"),
+    State("selected_countries_line", "data"),
+    State("selected_countries_bar", "data"),
 )
-
-def update_charts(clickData, _, selected_indices, selected_chart, selected_countries):
-    if ctx.triggered_id == "reset-btn":
-        selected_countries = ["Denmark"]
+def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_countries_line, selected_countries_bar):
+    if ctx.triggered_id == "reset-btn-line":
+        selected_countries_line = ["Denmark"]
+    if ctx.triggered_id == "reset-btn-bar":
+        selected_countries_bar = ["Denmark"]
     # Click event
     elif clickData and "points" in clickData and len(clickData["points"]) > 0:
         country_clicked = clickData["points"][0]["customdata"][0]
         if selected_chart == "line":
-            if country_clicked in selected_countries:
-                selected_countries.remove(country_clicked)
+            if country_clicked in selected_countries_line:
+                selected_countries_line.remove(country_clicked)
             else:
-                selected_countries.append(country_clicked)
+                selected_countries_line.append(country_clicked)
         elif selected_chart == "bar":
-            selected_countries = [ country_clicked ]
+            selected_countries_bar = [country_clicked]
 
     if selected_chart == "line":
-        return b.build_line_chart(selected_countries, selected_indices), selected_countries, None
+        return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), selected_countries_line, selected_countries_bar, None
     elif selected_chart == "bar":
-        return b.build_bar_chart(), selected_countries, None
+        return b.build_bar_chart(selected_countries_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None
     else:
-        return None, selected_countries, None
+        return None, selected_countries_line, selected_countries_bar, None
 
 
 if __name__ == "__main__":
