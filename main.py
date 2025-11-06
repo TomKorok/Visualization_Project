@@ -15,7 +15,7 @@ years = sorted(int(y) for y in merged_df["year"].unique())
 app = Dash(__name__)
 
 app.layout = html.Div([
-    html.H1("Big Mac Index VS Democracy Ratings World Wide Comparison", style={"textAlign": "center"}),
+    html.H1("Well-being Index comparison around the world", style={"textAlign": "center"}),
 
     html.Div([
         html.Label("Select up to 2 Indexes:", style={"fontWeight": "bold"}),
@@ -51,12 +51,47 @@ app.layout = html.Div([
     ),
     dcc.Store(id="selected_countries", data=["Denmark"]),
     dcc.Store(id="selected_indices"),
-
+    dcc.Dropdown(
+        id="chart-selector",
+        options=[
+            {"label": "Line Chart", "value": "line"},
+            {"label": "Bar Chart", "value": "bar"},
+        ],
+        value=None,
+        placeholder="Select a chart to display"
+    ),
     html.Div([
         dcc.Graph(id="line-chart"),
         html.Button("Reset Line Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
-    ])
+    ],
+    id="line-container",
+    style={"display": "none"}
+    ),
+    html.Div(
+        [
+            dcc.Graph(id="bar-chart"),
+            html.Button("Reset Bar Chart", id="reset-btn", n_clicks=0, className="plotly-btn")
+        ],
+        id="bar-container",
+        style={"display": "none"}
+    ),
 ])
+
+@app.callback(
+    Output("line-container", "style"),
+    Output("bar-container", "style"),
+    Input("chart-selector", "value")
+)
+def display_selected_chart(selected_chart):
+    # Default hidden
+    styles = [{"display": "none"}] * 2 #scale with charts
+
+    if selected_chart == "line":
+        styles[0] = {"display": "block"}
+    elif selected_chart == "bar":
+        styles[1] = {"display": "block"}
+
+    return styles
 
 @app.callback(
     Output("world-map", "figure"),
@@ -167,23 +202,30 @@ def update_selected_indexes(selected_values):
     Input("world-map", "clickData"),
     Input("reset-btn", "n_clicks"),
     Input("selected_indices", "data"),
+    Input("chart-selector", "value"),
     State("selected_countries", "data"),
 )
 
-def update_line_chart(clickData, _, selected_indices, selected_countries):
+def update_charts(clickData, _, selected_indices, selected_chart, selected_countries):
     if ctx.triggered_id == "reset-btn":
         selected_countries = ["Denmark"]
     # Click event
     elif clickData and "points" in clickData and len(clickData["points"]) > 0:
         country_clicked = clickData["points"][0]["customdata"][0]
+        if selected_chart == "line":
+            if country_clicked in selected_countries:
+                selected_countries.remove(country_clicked)
+            else:
+                selected_countries.append(country_clicked)
+        elif selected_chart == "bar":
+            selected_countries = [ country_clicked ]
 
-        if country_clicked in selected_countries:
-            selected_countries.remove(country_clicked)
-        else:
-            selected_countries.append(country_clicked)
-
-    return b.build_line_chart(selected_countries, selected_indices), selected_countries, None
-
+    if selected_chart == "line":
+        return b.build_line_chart(selected_countries, selected_indices), selected_countries, None
+    elif selected_chart == "bar":
+        return b.build_bar_chart(), selected_countries, None
+    else:
+        return None, selected_countries, None
 
 
 if __name__ == "__main__":
