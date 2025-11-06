@@ -154,3 +154,6 @@ def build_map(frames=None, years=[]):
             )
         )
     )
+
+def build_bar_chart():
+    pass
