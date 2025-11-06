@@ -41,3 +41,8 @@ def LoadBigMacIndex():
 def MergeDataFrames(df1, df2):
     merged_df = pd.merge(df1, df2, on=['country', 'year'], how='inner')
     return merged_df
+
+def get_merged_df():
+    DemocracyIndex = LoadDemocracyIndex()
+    BigmacIndex = LoadBigMacIndex()
+    return MergeDataFrames(DemocracyIndex, BigmacIndex)

@@ -1,111 +1,15 @@
 import plotly.graph_objects as go
 import DataHandling as dh
-import plotly.express as px
+import Builder as b
+import MetaData as md
 from dash import Dash, dcc, html, Output, Input, State, ctx
 
 # the amount of indexes allowed through the app:
 max_displayed_indexes = 2
-
-# initial data load
-DemocracyIndex = dh.LoadDemocracyIndex()
-BigmacIndex = dh.LoadBigMacIndex()
-
-# merging both datasets to have the same years and countries
-MergedIndex = dh.MergeDataFrames(DemocracyIndex, BigmacIndex)
-
-years = sorted(int(y) for y in MergedIndex["year"].unique())
-# prefixed colour based on the column name in the MergedIndex
-colours = {
-    "price_adjusted": 'Red',
-    "DIIndex" : 'Blue'
-}
-# prefixed legend names based on the column name in the MergedIndex
-legend_names = {
-    "price_adjusted": f"Big Mac Price [{MergedIndex["price_adjusted"].min():.2f} - {MergedIndex["price_adjusted"].max():.2f}]",
-    "DIIndex": "Democracy Index [0 - 10]"
-}
-# prefixed chart names based on the column name in the MergedIndex
-chart_names = {
-    "price_adjusted": 'Big Mac Price',
-    "DIIndex": "Democracy Index"
-}
-#prefixed data for hovering
-hover_data_1 = {
-    "price_adjusted": "%{customdata[",
-    "DIIndex": "%{customdata["
-}
-hover_data_2 = {
-    "price_adjusted": "]:.2f} USD",
-    "DIIndex": "]:.2f}"
-}
-
-# initial map figure
-def build_map(frames=None):
-    return go.Figure(
-        data= frames[0].data if frames is not None else None,
-        frames=frames,
-        layout=go.Layout(
-            title=frames[0].layout.title.text if frames else "",
-            clickmode="event+select",
-            geo=dict(showframe=False, showcoastlines=True, projection_type="natural earth"),
-            margin=dict(l=0, r=0, t=50, b=0),
-            updatemenus=[dict(
-                type="buttons",
-                showactive=False,
-                x=0.05, y=0.95,
-                xanchor="left", yanchor="top",
-                buttons=[
-                    dict(
-                        label="Play",
-                        method="animate",
-                        args=[None, {"frame": {"duration": 1000, "redraw": True},
-                                     "fromcurrent": True,
-                                     "transition": {"duration": 300, "easing": "linear"}}]
-                    ),
-                    dict(
-                        label="Pause",
-                        method="animate",
-                        args=[[None], {"frame": {"duration": 0, "redraw": False},
-                                       "mode": "immediate",
-                                       "transition": {"duration": 0}}]
-                    ),
-                    dict(
-                        label="Reset",
-                        method="animate",
-                        args=[[str(years[0])],
-                              {"frame": {"duration": 500, "redraw": True},
-                               "mode": "immediate",
-                               "transition": {"duration": 300}}]
-                    )
-                ]
-            )],
-            sliders=[dict(
-                active=0,
-                x=0.5,
-                xanchor="center",
-                len=0.9,
-                pad={"t": 50, "b": 20},  #
-                steps=[dict(
-                    label=str(year),
-                    method="animate",
-                    args=[[str(year)], {"frame": {"duration": 300, "redraw": True},
-                                        "mode": "immediate",
-                                        "transition": {"duration": 200}}]
-                ) for year in years]
-            )],
-            legend=dict(
-                title="Legend",
-                orientation="v",
-                yanchor="middle",
-                y=0.92,
-                xanchor="right",
-                x=1.01,
-                bgcolor="rgba(255,255,255,0.7)",
-                bordercolor="black",
-                borderwidth=0.5
-            )
-        )
-    )
+#preload the data
+merged_df = dh.get_merged_df()
+#get the years
+years = sorted(int(y) for y in merged_df["year"].unique())
 
 # dash app
 app = Dash(__name__)
@@ -135,7 +39,7 @@ app.layout = html.Div([
     }),
 
     html.Div(
-        dcc.Graph(id="world-map", figure=build_map(), style={"width": "100%", "height": "100%"}),
+        dcc.Graph(id="world-map", figure=b.build_map(years=years), style={"width": "100%", "height": "100%"}),
         style={
             "display": "flex",
             "justifyContent": "center",
@@ -161,13 +65,13 @@ app.layout = html.Div([
 def update_map(selected_indices):
     frames = []
     for year in years:
-        dff = MergedIndex[MergedIndex["year"] == year]
+        dff = merged_df[merged_df["year"] == year]
         data = []
 
         # dynamic title text
         title_text = ''
         for i in range(len(selected_indices)):
-            title_text += chart_names[selected_indices[i]]
+            title_text += md.chart_names[selected_indices[i]]
             if i != len(selected_indices) - 1:
                 title_text += " & "
             else:
@@ -181,7 +85,7 @@ def update_map(selected_indices):
                 locationmode="country names",
                 zmin=dff[selected_indices[0]].min(),
                 zmax=dff[selected_indices[0]].max(),
-                colorscale=colours[selected_indices[0]] + "s",
+                colorscale=md.colours[selected_indices[0]] + "s",
                 marker_line_color="white",
                 marker_line_width=0.5,
                 hoverinfo="skip",
@@ -189,7 +93,7 @@ def update_map(selected_indices):
                 unselected=dict(marker=dict(opacity=1)),
                 showlegend=True,
                 showscale=False,
-                name = legend_names[selected_indices[0]],
+                name = md.legend_names[selected_indices[0]],
             )
             data.append(choropleth)
 
@@ -202,14 +106,14 @@ def update_map(selected_indices):
                     mode="markers",
                     marker=dict(
                         size=dff[selected_indices[i]] * 5,
-                        color=colours[selected_indices[i]],
+                        color=md.colours[selected_indices[i]],
                         opacity=0.5,
                         line=dict(width=0.7, color="white")
                     ),
                     hoverinfo="skip",
                     selected=dict(marker=dict(opacity=0.5)),
                     unselected=dict(marker=dict(opacity=0.5)),
-                    name = legend_names[selected_indices[i]],
+                    name = md.legend_names[selected_indices[i]],
                     showlegend = True,
                 )
                 data.append(bubbles)
@@ -221,7 +125,7 @@ def update_map(selected_indices):
         #building hover info
         hover_info = "Country: %{customdata[0]}<br>"
         for index in selected_indices:
-            hover_info += chart_names[index] + " " + hover_data_1[index] + str(selected_indices.index(index) + 1) + hover_data_2[index] + "<br>"
+            hover_info += md.chart_names[index] + " " + md.hover_data_1[index] + str(selected_indices.index(index) + 1) + md.hover_data_2[index] + "<br>"
         hover_info += "<extra></extra>"
         # an invisible marker per country so selection events are triggered reliably.
         scatter_text = go.Scattergeo(
@@ -244,7 +148,7 @@ def update_map(selected_indices):
                 title_text = title_text,
             )
         ))
-    return build_map(frames)
+    return b.build_map(frames=frames, years=years)
 
 @app.callback(
     Output("index-dropdown", "value"),          # updates UI display
@@ -278,88 +182,9 @@ def update_line_chart(clickData, _, selected_indices, selected_countries):
         else:
             selected_countries.append(country_clicked)
 
-    return build_line_chart(selected_countries, selected_indices), selected_countries, None
+    return b.build_line_chart(selected_countries, selected_indices), selected_countries, None
 
-def build_line_chart(selected_countries, selected_indices):
-    fig = go.Figure()
-    color_map = px.colors.qualitative.Plotly
-    country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
-    for country in selected_countries:
-        df_country = MergedIndex[MergedIndex["country"] == country].sort_values("year")
-        color = country_colors[country]
-        if len(selected_indices) > 0:
-            fig.add_trace(go.Scatter(
-                x=df_country["year"],
-                y=df_country[selected_indices[0]],
-                mode="lines+markers",
-                name=f"{country} - {chart_names[selected_indices[0]]}",
-                yaxis="y1",
-                line=dict(width=2, color=color),
-                showlegend=True
-            ))
-        if len(selected_indices) > 1:
-            fig.add_trace(go.Scatter(
-                x=df_country["year"],
-                y=df_country[selected_indices[1]],
-                mode="lines+markers",
-                name=f"{country} - {chart_names[selected_indices[1]]}",
-                yaxis="y2",
-                line=dict(width=2, dash="dot", color=color),
-                showlegend=True
-            ))
 
-    # dynamic title text
-    title_text = ''
-    if len(selected_indices) > 0:
-        title_text += chart_names[selected_indices[0]]
-    if len(selected_indices) > 1:
-        title_text += " & " + chart_names[selected_indices[1]]
-    if len(selected_indices) > 0:
-        title_text += " Over Time"
-
-    if len(selected_indices) > 0:
-        layout_kwargs = dict(
-            title=title_text,
-            xaxis=dict(title="Year"),
-            yaxis=dict(
-                title=chart_names[selected_indices[0]],
-                tickfont=dict(color="black"),
-                range=[0, 12],
-            ),
-            legend=dict(
-                x=1.05,
-                y=1,
-                xanchor="left",
-                yanchor="top",
-                bgcolor="rgba(255,255,255,0.7)",
-                bordercolor="rgba(0,0,0,0.1)",
-                borderwidth=1
-            ),
-            template="plotly_white",
-            margin=dict(r=150)
-        )
-
-        # Only add yaxis2 if there's a second selected index
-        if len(selected_indices) > 1:
-            layout_kwargs['yaxis2'] = dict(
-                title=chart_names[selected_indices[1]],
-                tickfont=dict(color="black"),
-                overlaying="y",
-                side="right",
-                range=[0, 12]
-            )
-
-        # Apply layout
-        fig.update_layout(**layout_kwargs)
-    else:
-        # Fallback if no selected indices
-        fig.update_layout(
-            title=title_text,
-            xaxis=dict(title="Year"),
-            template="plotly_white",
-            margin=dict(r=150)
-        )
-    return fig
 
 if __name__ == "__main__":
     app.run(debug=True)
