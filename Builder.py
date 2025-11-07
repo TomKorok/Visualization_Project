@@ -249,30 +249,25 @@ def build_map(frames=None, years=[]):
         )
     )
 
-def build_bar_chart(selected_countries, all_indexes, merged_df):
+def build_bar_chart(selected_countries, year, all_indexes, merged_df):
     fig = go.Figure()
-    color_map = px.colors.qualitative.Plotly
 
-    # Loop through countries and add one trace per country per index
-    for country in selected_countries:
-        df_country = merged_df[merged_df["country"] == country].sort_values("year")
+    #selected_countries here is always 1 long
+    data = merged_df[
+        (merged_df["country"] == selected_countries[0]) &
+        (merged_df["year"] == year) ]
 
-        # Use most recent year (or average)
-        latest_year = df_country["year"].max()
-        df_latest = df_country[df_country["year"] == latest_year]
+    # Build bars for all indexes
+    y_values = [data[idx].values[0] if idx in data else None for idx in all_indexes]
+    x_labels = [cc.chart_config[idx]["chart_name"] for idx in all_indexes]
 
-        # Build bars for all indexes
-        y_values = [df_latest[idx].values[0] if idx in df_latest else None for idx in all_indexes]
-        x_labels = [cc.chart_config[idx]["chart_name"] for idx in all_indexes]
-
-        fig.add_trace(go.Bar(
-            x=x_labels,
-            y=y_values,
-            name=country,
-            marker_color="Darkorange",
-            text=[f"{y:.2f}" if y is not None else "" for y in y_values],
-            textposition="auto"
-        ))
+    fig.add_trace(go.Bar(
+        x=x_labels,
+        y=y_values,
+        marker_color="Darkorange",
+        text=[f"{y:.2f}" if y is not None else "" for y in y_values],
+        textposition="auto"
+    ))
 
     # Build dynamic title
     title_text = "Comparison for " + selected_countries[0] + " Across All Available Indexes"

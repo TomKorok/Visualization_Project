@@ -71,6 +71,13 @@ app.layout = html.Div([
     ),
     html.Div(
         [
+            dcc.Dropdown(
+                id='year-selector-bar',
+                options=[{'label': str(year), 'value': year} for year in years],
+                value=2006,  # default
+                clearable=False,
+                style={'width': '150px'}
+            ),
             dcc.Graph(id="bar-chart"),
             html.Button("Reset Bar Chart", id="reset-btn-bar", n_clicks=0, className="plotly-btn")
         ],
@@ -122,10 +129,11 @@ def update_selected_indexes(selected_values):
     Input("reset-btn-bar", "n_clicks"),
     Input("selected_indexes", "data"),
     Input("chart-selector", "value"),
+    Input("year-selector-bar", "value"),
     State("selected_countries_line", "data"),
     State("selected_countries_bar", "data"),
 )
-def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_countries_line, selected_countries_bar):
+def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, selected_countries_line, selected_countries_bar):
     if ctx.triggered_id == "reset-btn-line":
         selected_countries_line = ["Denmark"]
     if ctx.triggered_id == "reset-btn-bar":
@@ -144,7 +152,7 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_c
     if selected_chart == "line":
         return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), selected_countries_line, selected_countries_bar, None
     elif selected_chart == "bar":
-        return b.build_bar_chart(selected_countries_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None
+        return b.build_bar_chart(selected_countries_bar, selected_year_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None
     else:
         return None, selected_countries_line, selected_countries_bar, None
 
