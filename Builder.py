@@ -197,21 +197,21 @@ def build_map(frames=None, years=[]):
                 xanchor="left", yanchor="top",
                 buttons=[
                     dict(
-                        label="Play",
+                        label="Animation Play",
                         method="animate",
                         args=[None, {"frame": {"duration": 1000, "redraw": True},
                                      "fromcurrent": True,
                                      "transition": {"duration": 300, "easing": "linear"}}]
                     ),
                     dict(
-                        label="Pause",
+                        label="Animation Pause",
                         method="animate",
                         args=[[None], {"frame": {"duration": 0, "redraw": False},
                                        "mode": "immediate",
                                        "transition": {"duration": 0}}]
                     ),
                     dict(
-                        label="Reset",
+                        label="Animation Reset",
                         method="animate",
                         args=[[str(years[0])],
                               {"frame": {"duration": 500, "redraw": True},
