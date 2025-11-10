@@ -2,7 +2,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 import chart_config as cc
-import DataHandling as dh
 
 
 def build_line_chart(selected_countries, selected_indexes, merged_df):
@@ -257,8 +256,13 @@ def build_bar_chart(selected_countries, year, all_indexes, merged_df):
         (merged_df["country"] == selected_countries[0]) &
         (merged_df["year"] == year) ]
 
+    if data.empty:
+        return go.Figure().update_layout(
+            title=f"No data available for {selected_countries[0]} in {year}"
+        )
+
     # Build bars for all indexes
-    y_values = [data[idx].values[0] if idx in data else None for idx in all_indexes]
+    y_values = [data[idx].values[0] if idx in data.columns else None for idx in all_indexes]
     x_labels = [cc.chart_config[idx]["chart_name"] for idx in all_indexes]
 
     fig.add_trace(go.Bar(

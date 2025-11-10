@@ -74,7 +74,7 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id='year-selector-bar',
                 options=[{'label': str(year), 'value': year} for year in years],
-                value=2006,  # default
+                value=years[0],  # default
                 clearable=False,
                 style={'width': '150px'}
             ),
@@ -121,9 +121,11 @@ def update_selected_indexes(selected_values):
 # line chart callback
 @app.callback(
     Output("line-chart", "figure"),
+    Output("bar-chart", "figure"),
     Output("selected_countries_line", "data"),
     Output("selected_countries_bar", "data"),
     Output("world-map", "clickData"),
+    Output("year-selector-bar", "value"),
     Input("world-map", "clickData"),
     Input("reset-btn-line", "n_clicks"),
     Input("reset-btn-bar", "n_clicks"),
@@ -133,11 +135,12 @@ def update_selected_indexes(selected_values):
     State("selected_countries_line", "data"),
     State("selected_countries_bar", "data"),
 )
-def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, selected_countries_line, selected_countries_bar):
+def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, selected_countries_line, selected_countries_bar, ):
     if ctx.triggered_id == "reset-btn-line":
         selected_countries_line = ["Denmark"]
     if ctx.triggered_id == "reset-btn-bar":
         selected_countries_bar = ["Denmark"]
+        selected_year_bar = years[0]
     # Click event
     elif clickData and "points" in clickData and len(clickData["points"]) > 0:
         country_clicked = clickData["points"][0]["customdata"][0]
@@ -150,11 +153,11 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_y
             selected_countries_bar = [country_clicked]
 
     if selected_chart == "line":
-        return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), selected_countries_line, selected_countries_bar, None
+        return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), None, selected_countries_line, selected_countries_bar, None, selected_year_bar
     elif selected_chart == "bar":
-        return b.build_bar_chart(selected_countries_bar, selected_year_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None
+        return None, b.build_bar_chart(selected_countries_bar, selected_year_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None, selected_year_bar
     else:
-        return None, selected_countries_line, selected_countries_bar, None
+        return None, None, selected_countries_line, selected_countries_bar, None, selected_year_bar
 
 
 if __name__ == "__main__":
