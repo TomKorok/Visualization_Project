@@ -187,11 +187,11 @@ def build_map(frames=None, years=[]):
                 showframe=False,
                 showcoastlines=True,
                 projection_type="natural earth",
-                bgcolor = 'rgba(0,0,0,0)' #transparent
+                bgcolor = 'rgba(0,0,0,0)'
             ),
             margin=dict(l=0, r=0, t=50, b=0),
-            paper_bgcolor='rgba(0,0,0,0)',  # transparent
-            plot_bgcolor='rgba(0,0,0,0)',  # transparent
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
             updatemenus=[dict(
                 type="buttons",
                 showactive=False,
@@ -278,7 +278,6 @@ def build_bar_chart(selected_countries, year, all_indexes, merged_df):
     # Build dynamic title
     title_text = "Comparison for " + selected_countries[0] + " Across All Available Indexes"
 
-    # Transparent, clean layout
     fig.update_layout(
         title=title_text,
         xaxis=dict(title=""),

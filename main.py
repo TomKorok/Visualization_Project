@@ -26,7 +26,7 @@ app.layout = html.Div([
                 {"label": "Democracy Index", "value": "DIIndex"},
                 {"label": "Test", "value": ""},
             ],
-            value=[],  # default selection
+            value=[],  # default empty selection
             multi=True,
             maxHeight=300,
             style={"width": "60%"}
@@ -93,7 +93,7 @@ app.layout = html.Div([
 )
 def update_selected_charts(selected_chart):
     # Default hidden
-    styles = [{"display": "none"}] * 2 #scale with charts
+    styles = [{"display": "none"}] * 2 # scale with charts
 
     if selected_chart == "line":
         styles[0] = {"display": "block"}
@@ -118,7 +118,7 @@ def update_selected_indexes(selected_values):
     return selected_values[:max_displayed_indexes], selected_values[:max_displayed_indexes] #returns as much selected as much is allowed
 
 
-# line chart callback
+# charts control callback
 @app.callback(
     Output("line-chart", "figure"),
     Output("bar-chart", "figure"),
@@ -136,6 +136,7 @@ def update_selected_indexes(selected_values):
     State("selected_countries_bar", "data"),
 )
 def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, selected_countries_line, selected_countries_bar, ):
+    # reset buttons
     if ctx.triggered_id == "reset-btn-line":
         selected_countries_line = ["Denmark"]
     if ctx.triggered_id == "reset-btn-bar":
@@ -152,6 +153,7 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_y
         elif selected_chart == "bar":
             selected_countries_bar = [country_clicked]
 
+    #updating charts
     if selected_chart == "line":
         return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), None, selected_countries_line, selected_countries_bar, None, selected_year_bar
     elif selected_chart == "bar":

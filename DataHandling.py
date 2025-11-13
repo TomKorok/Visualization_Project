@@ -29,7 +29,7 @@ def LoadBigMacIndex():
 
     cpi_map = dict(zip(cpi_df['year'], cpi_df['avg_cpi']))
 
-    cpi_2024 = cpi_map[2024]
+    cpi_2024 = cpi_map[2024] #using 2024 as baseline for inflation
 
     df['cpi_for_year'] = df['year'].map(cpi_map)
     df['inflation_multiplier'] = cpi_2024 / df['cpi_for_year']
