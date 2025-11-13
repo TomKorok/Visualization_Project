@@ -1,12 +1,8 @@
-/* Make background fill the whole app
+/* Make background fill the whole app */
 html, body, #root, .dash-app, ._dash-app-content, .app-container {
     height: 100%;
     margin: 0;
     padding: 0;
-    background-image: url("desh.jpg");
     background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    background-color: #F5F5F5;
 }
-*/

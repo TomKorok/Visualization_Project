@@ -59,8 +59,9 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
                 bordercolor="rgba(0,0,0,0.1)",
                 borderwidth=1
             ),
-            template="plotly_white",
-            margin=dict(r=150)
+            margin=dict(r=150),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
         )
 
         # Only add yaxis2 if there's a second selected index
@@ -80,8 +81,9 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
         fig.update_layout(
             title=title_text,
             xaxis=dict(title="Year"),
-            template="plotly_white",
-            margin=dict(r=150)
+            margin=dict(r=150),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
         )
     return fig
 
@@ -279,18 +281,9 @@ def build_bar_chart(selected_countries, year, all_indexes, merged_df):
     # Transparent, clean layout
     fig.update_layout(
         title=title_text,
-        xaxis=dict(title="Indexes"),
+        xaxis=dict(title=""),
         yaxis=dict(title="Value", range=[0, 12]),
         barmode="group",
-        legend=dict(
-            x=1.02,
-            y=1,
-            xanchor="left",
-            yanchor="top",
-            bgcolor="rgba(255,255,255,0.7)",
-            bordercolor="rgba(0,0,0,0.1)",
-            borderwidth=1
-        ),
         margin=dict(r=150, t=50, b=80),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)"
