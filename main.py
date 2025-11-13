@@ -10,7 +10,7 @@ max_displayed_indexes = 2
 merged_df = dh.get_merged_df()
 #get the years
 years = sorted(int(y) for y in merged_df["year"].unique())
-all_indexes = ["price_adjusted", "DIIndex"]
+all_indexes = ["price_adjusted", "DIIndex", "GDPValue", "GDPCapitaValue"]
 # dash app
 app = Dash(__name__)
 
@@ -24,7 +24,8 @@ app.layout = html.Div([
             options=[
                 {"label": "Big Mac Index", "value": "price_adjusted"},
                 {"label": "Democracy Index", "value": "DIIndex"},
-                {"label": "Test", "value": ""},
+                {"label": "GDP", "value": "GDPValue"},
+                {"label": "GDP Per Capita", "value": "GDPCapitaValue"},
             ],
             value=[],  # default empty selection
             multi=True,

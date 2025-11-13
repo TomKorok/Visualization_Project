@@ -46,8 +46,6 @@ def LoadGDPCountry():
     df_long = df.melt(id_vars=["Country"], 
                     var_name="year", 
                     value_name="Value")
-    # Remove entries without a value
-
 
     df_long["year"] = pd.to_numeric(df_long["year"], errors="coerce").astype("Int64")
     df_long = df_long.dropna(subset=["Value"])
@@ -94,6 +92,7 @@ def LoadGDPCapita():
 
 def MergeDataFrames(dfs):
     merged_df = reduce(lambda left, right: pd.merge(left, right, on=['country', 'year'], how='outer'), dfs )
+    merged_df.fillna(0, inplace=True)
     return merged_df
 
 def test():
@@ -119,9 +118,6 @@ def test():
     print (F"{MergedIndex[['country', 'year',"GDPValue", "DIIndex", "price_adjusted", "GDPCapitaValue"]].head(5)}")
 
 test()
-def MergeDataFrames(df1, df2):
-    merged_df = pd.merge(df1, df2, on=['country', 'year'], how='inner')
-    return merged_df
 
 def get_merged_df():
-    return MergeDataFrames(LoadDemocracyIndex(), LoadBigMacIndex())
+    return MergeDataFrames([LoadDemocracyIndex(), LoadBigMacIndex(), LoadGDPCountry(), LoadGDPCapita()])
