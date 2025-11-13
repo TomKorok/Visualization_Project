@@ -1,40 +1,8 @@
-/* Dash HTML buttons */
-.plotly-btn {
-  background-color: white;
-  border: 1px solid lightgray;
-  border-radius: 4px;
-  color: black;
-  padding: 6px 12px;
-  margin: 5px;
-  font-size: 14px;
-  font-family: Arial, sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+/* Make background fill the whole app */
+html, body, #root, .dash-app, ._dash-app-content, .app-container {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-size: cover;
+    background-color: #F5F5F5;
 }
-
-.plotly-btn:hover {
-  background-color: #f0f0f0;
-  border-color: #999;
-}
-
-/* Plotly updatemenu button visuals (SVG) */
-.plotly .updatemenu-button rect {
-  fill: white !important;          /* background */
-  stroke: lightgray !important;    /* border */
-  stroke-width: 1 !important;
-  transition: all 0.2s ease-in-out;
-}
-
-.plotly .updatemenu-button:hover rect {
-  fill: #f0f0f0 !important;
-  stroke: #999 !important;
-}
-
-.plotly .updatemenu-button text {
-  fill: black !important;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-}
-
-/* Optional container */
-#button-container { display:flex; gap:8px; justify-content:center; }
