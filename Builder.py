@@ -88,8 +88,22 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
         )
     return fig
 
-def build_map_info(years, merged_df, selected_indexes):
+def build_map_info(years = [], merged_df=[], selected_indexes=[]):
     frames = []
+    #building an empty frame for initial display
+    if len(years) == 0:
+        frames.append(go.Frame(
+            data=[go.Scattergeo(
+                locations=[],
+                locationmode="country names",
+                showlegend=False,
+                hoverinfo="skip",
+                name=""
+            )],
+            layout=go.Layout(
+                title_text="",
+            )
+        ))
     for year in years:
         dff = merged_df[merged_df["year"] == year]
         data = []
@@ -177,9 +191,9 @@ def build_map_info(years, merged_df, selected_indexes):
     return frames
 
 # initial map figure
-def build_map(frames=None, years=[]):
+def build_map(frames, years=[]):
     return go.Figure(
-        data= frames[0].data if frames is not None and len(frames) != 0 else None,
+        data= frames[0].data,
         frames=frames,
         layout=go.Layout(
             title=frames[0].layout.title.text if frames else "",
@@ -216,13 +230,13 @@ def build_map(frames=None, years=[]):
                     dict(
                         label="Animation Reset",
                         method="animate",
-                        args=[[str(years[0] if years else 2000)],
+                        args=[[str(years[0])],
                               {"frame": {"duration": 500, "redraw": True},
                                "mode": "immediate",
                                "transition": {"duration": 300}}]
                     )
                 ]
-            )],
+            )] if years else [],
             sliders=[dict(
                 active=0,
                 x=0.5,
@@ -236,7 +250,7 @@ def build_map(frames=None, years=[]):
                                         "mode": "immediate",
                                         "transition": {"duration": 200}}]
                 ) for year in years]
-            )],
+            )] if years else [],
             legend=dict(
                 title="Legend",
                 orientation="v",
