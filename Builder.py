@@ -7,42 +7,39 @@ import chart_config as cc
 def build_line_chart(selected_countries, selected_indexes, merged_df):
     #TODO: display the GDP data on the linechart
     fig = go.Figure()
-    color_map = px.colors.qualitative.Plotly
-    country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
-    for country in selected_countries:
-        df_country = merged_df[merged_df["country"] == country].sort_values("year")
-        color = country_colors[country]
-        if len(selected_indexes) > 0:
-            fig.add_trace(go.Scatter(
-                x=df_country["year"],
-                y=df_country[selected_indexes[0]],
-                mode="lines+markers",
-                name=f"{country} - {cc.chart_config[selected_indexes[0]]["chart_name"]}",
-                yaxis="y1",
-                line=dict(width=2, color=color),
-                showlegend=True
-            ))
-        if len(selected_indexes) > 1:
-            fig.add_trace(go.Scatter(
-                x=df_country["year"],
-                y=df_country[selected_indexes[1]],
-                mode="lines+markers",
-                name=f"{country} - {cc.chart_config[selected_indexes[1]]["chart_name"]}",
-                yaxis="y2",
-                line=dict(width=2, dash="dot", color=color),
-                showlegend=True
-            ))
+    if len(selected_indexes) > 0:
+        color_map = px.colors.qualitative.Plotly
+        country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
+        for country in selected_countries:
+            df_country = merged_df[merged_df["country"] == country].sort_values("year")
+            color = country_colors[country]
+            if len(selected_indexes) > 0:
+                fig.add_trace(go.Scatter(
+                    x=df_country["year"],
+                    y=df_country[selected_indexes[0]],
+                    mode="lines+markers",
+                    name=f"{country} - {cc.chart_config[selected_indexes[0]]["chart_name"]}",
+                    yaxis="y1",
+                    line=dict(width=2, color=color),
+                    showlegend=True
+                ))
+            if len(selected_indexes) > 1:
+                fig.add_trace(go.Scatter(
+                    x=df_country["year"],
+                    y=df_country[selected_indexes[1]],
+                    mode="lines+markers",
+                    name=f"{country} - {cc.chart_config[selected_indexes[1]]["chart_name"]}",
+                    yaxis="y2",
+                    line=dict(width=2, dash="dot", color=color),
+                    showlegend=True
+                ))
 
-    # dynamic title text
-    title_text = ''
-    if len(selected_indexes) > 0:
-        title_text += cc.chart_config[selected_indexes[0]]["chart_name"]
-    if len(selected_indexes) > 1:
-        title_text += " & " + cc.chart_config[selected_indexes[1]]["chart_name"]
-    if len(selected_indexes) > 0:
+        # dynamic title text
+        title_text = cc.chart_config[selected_indexes[0]]["chart_name"]
+        for index in selected_indexes[1:]:
+            title_text += " & " + cc.chart_config[index]["chart_name"]
         title_text += " Over Time"
 
-    if len(selected_indexes) > 0:
         layout_kwargs = dict(
             title=title_text,
             xaxis=dict(title="Year"),
@@ -66,9 +63,9 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
         )
 
         # Only add yaxis2 if there's a second selected index
-        if len(selected_indexes) > 1:
+        for index in selected_indexes[1:]:
             layout_kwargs['yaxis2'] = dict(
-                title=cc.chart_config[selected_indexes[1]]["chart_name"],
+                title=cc.chart_config[index]["chart_name"],
                 tickfont=dict(color="black"),
                 overlaying="y",
                 side="right",
@@ -80,7 +77,7 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
     else:
         # Fallback if no selected indices
         fig.update_layout(
-            title=title_text,
+            title="",
             xaxis=dict(title="Year"),
             margin=dict(r=150),
             plot_bgcolor='rgba(0,0,0,0)',
