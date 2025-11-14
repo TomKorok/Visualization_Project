@@ -38,7 +38,7 @@ app.layout = html.Div([
     }),
 
     html.Div(
-        dcc.Graph(id="world-map", figure=b.build_map(), style={"width": "100%", "height": "100%"}),
+        dcc.Graph(id="world-map", figure=b.build_map(frames=b.build_map_info()), style={"width": "100%", "height": "100%"}),
         style={
             "display": "flex",
             "justifyContent": "center",
@@ -107,7 +107,6 @@ def update_selected_charts(selected_chart):
     Input("merged_df", "data"),
 )
 def update_map(selected_indexes, merged_df):
-    #TODO: display the empty map if no data is available
     merged_df = pd.read_json(merged_df, orient="split") if merged_df else pd.DataFrame()
     years = sorted(merged_df["year"].astype(int).unique()) if not merged_df.empty else []
     return b.build_map(frames=b.build_map_info(years, merged_df, selected_indexes), years=years)
