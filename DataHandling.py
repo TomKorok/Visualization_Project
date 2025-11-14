@@ -1,9 +1,37 @@
 import pandas as pd
 from functools import reduce
 
+class DataHandler:
+    def __init__(self):
+        self.all_indexes = ["price_adjusted", "DIIndex", "GDPValue", "GDPCapitaValue"]
+        self.data = {
+            "price_adjusted": LoadBigMacIndex(),
+            "DIIndex": LoadDemocracyIndex(),
+            "GDPValue": LoadGDPCountry(),
+            "GDPCapitaValue": LoadGDPCapita(),
+            "all": None
+        }
+        all_dfs = self.get_merged_df(df_names = self.all_indexes, how="outer")
+        self.data["all"] = all_dfs
+        self.all_year = sorted(all_dfs["year"].astype(int).unique())
+
+    def get_merged_df(self, df_names = [], how="inner"):
+        dfs_to_merge = [self.get_df_by_name(df_name) for df_name in df_names]
+        return MergeDataFrames(dfs_to_merge, how=how)
+
+    def get_df_by_name(self, name):
+        return self.data[name]
+
+    def get_all_indexes(self):
+        return self.all_indexes
+
+    def get_all_years(self):
+        return self.all_year
+
+
 def LoadDemocracyIndex():
     df = pd.read_csv("EIU_DI.csv")
-    df = df.rename(columns={"REF_AREA_LABEL": "country", "OBS_VALUE": "DIIndex", "TIME_PERIOD": "year"})  
+    df = df.rename(columns={"REF_AREA_LABEL": "country", "OBS_VALUE": "DIIndex", "TIME_PERIOD": "year"})
     return df[['country', 'year',"DIIndex"]]
 
 def LoadBigMacIndex():
@@ -90,10 +118,11 @@ def LoadGDPCapita():
 
     return df_long
 
-def MergeDataFrames(dfs):
-    merged_df = reduce(lambda left, right: pd.merge(left, right, on=['country', 'year'], how='outer'), dfs )
-    merged_df.fillna(0, inplace=True)
-    return merged_df
+def MergeDataFrames(dfs, how="inner"):
+    if len(dfs) != 0:
+        return reduce(lambda left, right: pd.merge(left, right, on=['country', 'year'], how=how), dfs )
+    else:
+        return pd.DataFrame()
 
 def test():
     DemocracyIndex = LoadDemocracyIndex()
@@ -116,8 +145,3 @@ def test():
     print (F"MergedIndex.columns")
     print (F"{MergedIndex.columns}")
     print (F"{MergedIndex[['country', 'year',"GDPValue", "DIIndex", "price_adjusted", "GDPCapitaValue"]].head(5)}")
-
-test()
-
-def get_merged_df():
-    return MergeDataFrames([LoadDemocracyIndex(), LoadBigMacIndex(), LoadGDPCountry(), LoadGDPCapita()])
