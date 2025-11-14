@@ -20,7 +20,7 @@ app.layout = html.Div([
         dcc.Dropdown(
             id="index-dropdown",
             options=[
-                {"label": "Big Mac Index", "value": "price_adjusted"},
+                {"label": "Big Mac Index", "value": "BMI"},
                 {"label": "Democracy Index", "value": "DIIndex"},
                 {"label": "GDP", "value": "GDPValue"},
                 {"label": "GDP Per Capita", "value": "GDPCapitaValue"},
