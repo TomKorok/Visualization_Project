@@ -1,11 +1,12 @@
+import numpy as np
 import pandas as pd
 from functools import reduce
 
 class DataHandler:
     def __init__(self):
-        self.all_indexes = ["price_adjusted", "DIIndex", "GDPValue", "GDPCapitaValue"]
+        self.all_indexes = ["BMI", "DIIndex", "GDPValue", "GDPCapitaValue"]
         self.data = {
-            "price_adjusted": LoadBigMacIndex(),
+            "BMI": LoadBigMacIndex(),
             "DIIndex": LoadDemocracyIndex(),
             "GDPValue": LoadGDPCountry(),
             "GDPCapitaValue": LoadGDPCapita(),
@@ -30,7 +31,7 @@ class DataHandler:
 
 
 def LoadDemocracyIndex():
-    df = pd.read_csv("EIU_DI.csv")
+    df = pd.read_csv("DemocracyIndex.csv")
     df = df.rename(columns={"REF_AREA_LABEL": "country", "OBS_VALUE": "DIIndex", "TIME_PERIOD": "year"})
     return df[['country', 'year',"DIIndex"]]
 
@@ -63,34 +64,36 @@ def LoadBigMacIndex():
     df['cpi_for_year'] = df['year'].map(cpi_map)
     df['inflation_multiplier'] = cpi_2024 / df['cpi_for_year']
 
-    df['price_adjusted'] = df['price'] * df['inflation_multiplier']
+    df['BMI'] = df['price'] * df['inflation_multiplier']
 
-    return df
+    df["BMI"] = 10 * (np.log(df["BMI"]) / np.log(df["BMI"]).max())
+
+    return df[["country", "year", "BMI"]]
 
 def LoadGDPCountry():
-    df = pd.read_csv("GDP_1975_2025.csv")
+    df = pd.read_csv("GDP.csv")
 
     # Melt the dataframe — convert year columns into rows to convert from wide format to long format
-    df_long = df.melt(id_vars=["Country"], 
+    df = df.melt(id_vars=["Country"],
                     var_name="year", 
                     value_name="Value")
 
-    df_long["year"] = pd.to_numeric(df_long["year"], errors="coerce").astype("Int64")
-    df_long = df_long.dropna(subset=["Value"])
+    df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+    df = df.dropna(subset=["Value"])
 
     # Filter out values before 2000
-    df_long = df_long[df_long["year"] >= 2000]
+    df = df[df["year"] >= 2000]
 
-    df_long.rename(columns={"Country": "country", "Value": "GDPValue"}, inplace=True)
-    df_long['GDPValue'] = pd.to_numeric(df_long['GDPValue'], errors='coerce')
+    df.rename(columns={"Country": "country", "Value": "GDPValue"}, inplace=True)
+    df['GDPValue'] = pd.to_numeric(df['GDPValue'], errors='coerce')
 
-    df_long = df_long.sort_values(["country", "year"]).reset_index(drop=True)
-
-    return df_long
+    df = df.sort_values(["country", "year"]).reset_index(drop=True)
+    df["GDPValue"] = 10 * (np.log(df["GDPValue"]) / np.log(df["GDPValue"]).max()) # map the values between 0 and 10
+    return df
 
 def LoadGDPCapita():
     # Read the dataset
-    df = pd.read_csv("GDPCapita_2000_2024.csv")
+    df = pd.read_csv("GDPCapita.csv")
 
     # Strip column names just in case
     df.columns = df.columns.str.strip()
@@ -99,7 +102,7 @@ def LoadGDPCapita():
     year_cols = [col for col in df.columns if col.isdigit()]
 
     # Melt into long format
-    df_long = df.melt(
+    df = df.melt(
         id_vars=['Country Name', 'Country Code', 'Indicator Name', 'Indicator Code'],
         value_vars=year_cols,
         var_name='year',
@@ -107,16 +110,18 @@ def LoadGDPCapita():
     )
 
     # Convert year to integer and value to numeric
-    df_long['year'] = pd.to_numeric(df_long['year'], errors='coerce').astype('Int64')
-    df_long['value'] = pd.to_numeric(df_long['value'], errors='coerce')
-    df_long = df_long.dropna(subset=['value'])
+    df['year'] = pd.to_numeric(df['year'], errors='coerce').astype('Int64')
+    df['value'] = pd.to_numeric(df['value'], errors='coerce')
+    df = df.dropna(subset=['value'])
 
-    df_long = df_long[df_long["year"] >= 2000]
-    df_long.rename(columns={"Country Name": "country", "value": "GDPCapitaValue"}, inplace=True)
+    df = df[df["year"] >= 2000]
+    df.rename(columns={"Country Name": "country", "value": "GDPCapitaValue"}, inplace=True)
 
-    df_long = df_long.sort_values(["country", "year"]).reset_index(drop=True)
+    df = df.sort_values(["country", "year"]).reset_index(drop=True)
 
-    return df_long
+    df["GDPCapitaValue"] = 10 * (np.log(df["GDPCapitaValue"]) / np.log(df["GDPCapitaValue"]).max()) # map the values between 0 and 10
+
+    return df
 
 def MergeDataFrames(dfs, how="inner"):
     if len(dfs) != 0:
@@ -144,4 +149,6 @@ def test():
     MergedIndex = MergeDataFrames (dataframes)
     print (F"MergedIndex.columns")
     print (F"{MergedIndex.columns}")
-    print (F"{MergedIndex[['country', 'year',"GDPValue", "DIIndex", "price_adjusted", "GDPCapitaValue"]].head(5)}")
+    print (F"{MergedIndex[['country', 'year',"GDPValue", "DIIndex", "BMI", "GDPCapitaValue"]].head(5)}")
+
+test()

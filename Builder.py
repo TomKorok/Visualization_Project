@@ -5,7 +5,6 @@ import chart_config as cc
 
 
 def build_line_chart(selected_countries, selected_indexes, merged_df):
-    #TODO: display the GDP data on the linechart
     fig = go.Figure()
     if len(selected_indexes) > 0:
         color_map = px.colors.qualitative.Plotly
@@ -46,7 +45,7 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
             yaxis=dict(
                 title=cc.chart_config[selected_indexes[0]]["chart_name"],
                 tickfont=dict(color="black"),
-                range=[0, 12],
+                range=[0, 11], #everything but keept it 11 for better visibility
             ),
             legend=dict(
                 x=1.05,
@@ -69,7 +68,7 @@ def build_line_chart(selected_countries, selected_indexes, merged_df):
                 tickfont=dict(color="black"),
                 overlaying="y",
                 side="right",
-                range=[0, 12]
+                range=[0, 11]
             )
 
         # Apply layout
@@ -142,7 +141,7 @@ def build_map_info(years = [], merged_df=[], selected_indexes=[]):
                     locationmode="country names",
                     mode="markers",
                     marker=dict(
-                        size=dff[selected_indexes[i]] * 5,
+                        size=dff[selected_indexes[i]] * 3,
                         color=cc.chart_config[selected_indexes[i]]["color"],
                         opacity=0.5,
                         line=dict(width=0.7, color="white")

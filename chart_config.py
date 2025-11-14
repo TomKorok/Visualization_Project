@@ -1,9 +1,9 @@
 # metadata for displaying the correct text everywhere
 
 chart_config = {
-    "price_adjusted": {
+    "BMI": {
         "color": "Red",
-        "legend_name": "Big Mac Price [0 - 12.16] US$",
+        "legend_name": "Big Mac Price [0 - 10] Log Scaled",
         "chart_name": "Big Mac Price",
         "hover_prefix": "%{customdata[",
         "hover_suffix": "]:.2f} US$"
@@ -17,14 +17,14 @@ chart_config = {
     },
     "GDPValue": {
         "color": "Green",
-        "legend_name": "GDP [0 - 30507217] US$B",
+        "legend_name": "GDP [0 - 10] Log Scaled",
         "chart_name": "GDP",
         "hover_prefix": "%{customdata[",
         "hover_suffix": "]} US$B"
     },
     "GDPCapitaValue": {
         "color": "Orange",
-        "legend_name": "GDP Per Capita [0 - 138934.96] US$",
+        "legend_name": "GDP Per Capita [0 - 10] Log Scaled",
         "chart_name": "GDP Per Capita",
         "hover_prefix": "%{customdata[",
         "hover_suffix": "]:.2f} US$"
