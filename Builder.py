@@ -5,6 +5,7 @@ import chart_config as cc
 
 
 def build_line_chart(selected_countries, selected_indexes, merged_df):
+    #TODO: display the GDP data on the linechart
     fig = go.Figure()
     color_map = px.colors.qualitative.Plotly
     country_colors = {country: color_map[i % len(color_map)] for i, country in enumerate(selected_countries)}
@@ -178,7 +179,7 @@ def build_map_info(years, merged_df, selected_indexes):
 # initial map figure
 def build_map(frames=None, years=[]):
     return go.Figure(
-        data= frames[0].data if frames is not None else None,
+        data= frames[0].data if frames is not None and len(frames) != 0 else None,
         frames=frames,
         layout=go.Layout(
             title=frames[0].layout.title.text if frames else "",
@@ -215,7 +216,7 @@ def build_map(frames=None, years=[]):
                     dict(
                         label="Animation Reset",
                         method="animate",
-                        args=[[str(years[0])],
+                        args=[[str(years[0] if years else 2000)],
                               {"frame": {"duration": 500, "redraw": True},
                                "mode": "immediate",
                                "transition": {"duration": 300}}]

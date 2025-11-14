@@ -1,3 +1,4 @@
+import pandas as pd
 from pandas.core.indexes.api import all_indexes_same
 
 import DataHandling as dh
@@ -6,11 +7,8 @@ from dash import Dash, dcc, html, Output, Input, State, ctx
 
 # the amount of indexes allowed through the app:
 max_displayed_indexes = 2
-#preload the data
-merged_df = dh.get_merged_df()
-#get the years
-years = sorted(int(y) for y in merged_df["year"].unique())
-all_indexes = ["price_adjusted", "DIIndex", "GDPValue", "GDPCapitaValue"]
+# the data handler
+dh = dh.DataHandler()
 # dash app
 app = Dash(__name__)
 
@@ -40,7 +38,7 @@ app.layout = html.Div([
     }),
 
     html.Div(
-        dcc.Graph(id="world-map", figure=b.build_map(years=years), style={"width": "100%", "height": "100%"}),
+        dcc.Graph(id="world-map", figure=b.build_map(), style={"width": "100%", "height": "100%"}),
         style={
             "display": "flex",
             "justifyContent": "center",
@@ -50,10 +48,6 @@ app.layout = html.Div([
             "height": "80vh"
         }
     ),
-    dcc.Store(id="selected_countries_line", data=["Denmark"]),
-    dcc.Store(id="selected_countries_bar"
-                 "", data=["Denmark"]),
-    dcc.Store(id="selected_indexes"),
     dcc.Dropdown(
         id="chart-selector",
         options=[
@@ -74,8 +68,8 @@ app.layout = html.Div([
         [
             dcc.Dropdown(
                 id='year-selector-bar',
-                options=[{'label': str(year), 'value': year} for year in years],
-                value=years[0],  # default
+                options=[{'label': str(year), 'value': year} for year in dh.get_all_years()], #empty as well by default
+                value=dh.get_all_years()[0],  # default no year values
                 clearable=False,
                 style={'width': '150px'}
             ),
@@ -85,6 +79,10 @@ app.layout = html.Div([
         id="bar-container",
         style={"display": "none"}
     ),
+    dcc.Store(id="selected_countries_line", data=["Denmark"]),
+    dcc.Store(id="selected_countries_bar", data=["Denmark"]),
+    dcc.Store(id="selected_indexes"),
+    dcc.Store(id="merged_df")
 ])
 
 @app.callback(
@@ -106,17 +104,24 @@ def update_selected_charts(selected_chart):
 @app.callback(
     Output("world-map", "figure"),
     Input("selected_indexes", "data"),
+    Input("merged_df", "data"),
 )
-def update_map(selected_indexes):
+def update_map(selected_indexes, merged_df):
+    #TODO: display the empty map if no data is available
+    merged_df = pd.read_json(merged_df, orient="split") if merged_df else pd.DataFrame()
+    years = sorted(merged_df["year"].astype(int).unique()) if not merged_df.empty else []
     return b.build_map(frames=b.build_map_info(years, merged_df, selected_indexes), years=years)
 
 @app.callback(
     Output("index-dropdown", "value"),              # updates UI display
     Output("selected_indexes", "data"),                 # updates internal selection store
+    Output("merged_df", "data"),
     Input("index-dropdown", "value"),
 )
-def update_selected_indexes(selected_values):
-    return selected_values[:max_displayed_indexes], selected_values[:max_displayed_indexes] #returns as much selected as much is allowed
+def update_selected_indexes(index_dropdown):
+    selected_indexes = index_dropdown[:max_displayed_indexes]
+    merged_df = dh.get_merged_df(selected_indexes)
+    return selected_indexes, selected_indexes, merged_df.to_json(date_format="iso", orient="split") #returns as much selected as much is allowed
 
 
 # charts control callback
@@ -133,16 +138,20 @@ def update_selected_indexes(selected_values):
     Input("selected_indexes", "data"),
     Input("chart-selector", "value"),
     Input("year-selector-bar", "value"),
+    State("merged_df", "data"),
     State("selected_countries_line", "data"),
     State("selected_countries_bar", "data"),
 )
-def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, selected_countries_line, selected_countries_bar, ):
+def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_year_bar, merged_df, selected_countries_line, selected_countries_bar):
+    # reverting JSON
+    merged_df = pd.read_json(merged_df, orient="split") if merged_df else pd.DataFrame()
+
     # reset buttons
     if ctx.triggered_id == "reset-btn-line":
         selected_countries_line = ["Denmark"]
     if ctx.triggered_id == "reset-btn-bar":
         selected_countries_bar = ["Denmark"]
-        selected_year_bar = years[0]
+        selected_year_bar = dh.get_all_years()[0]
     # Click event
     elif clickData and "points" in clickData and len(clickData["points"]) > 0:
         country_clicked = clickData["points"][0]["customdata"][0]
@@ -158,7 +167,7 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_y
     if selected_chart == "line":
         return b.build_line_chart(selected_countries_line, selected_indexes, merged_df), None, selected_countries_line, selected_countries_bar, None, selected_year_bar
     elif selected_chart == "bar":
-        return None, b.build_bar_chart(selected_countries_bar, selected_year_bar, all_indexes, merged_df), selected_countries_line, selected_countries_bar, None, selected_year_bar
+        return None, b.build_bar_chart(selected_countries_bar, selected_year_bar, dh.get_all_indexes(), dh.get_df_by_name("all")), selected_countries_line, selected_countries_bar, None, selected_year_bar
     else:
         return None, None, selected_countries_line, selected_countries_bar, None, selected_year_bar
 
