@@ -24,6 +24,8 @@ app.layout = html.Div([
                 {"label": "Democracy Index", "value": "DIIndex"},
                 {"label": "GDP", "value": "GDPValue"},
                 {"label": "GDP Per Capita", "value": "GDPCapitaValue"},
+                {"label": "Human Development Index", "value": "HDIValue"},
+                {"label": "Life Expectancy Index", "value": "LifeExpectancy"},
             ],
             value=[],  # default empty selection
             multi=True,

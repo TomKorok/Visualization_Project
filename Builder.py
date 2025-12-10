@@ -136,12 +136,14 @@ def build_map_info(years = [], merged_df=[], selected_indexes=[]):
         # every other index as bubis bublé
         for i in range(1, len(selected_indexes)):
             if selected_indexes[i] in dff.columns:
+                bubble_values = dff[selected_indexes[i]].fillna(0)
+
                 bubbles = go.Scattergeo(
                     locations=dff["country"],
                     locationmode="country names",
                     mode="markers",
                     marker=dict(
-                        size=dff[selected_indexes[i]] * 3,
+                        size=(bubble_values * 3).tolist(),
                         color=cc.chart_config[selected_indexes[i]]["color"],
                         opacity=0.5,
                         line=dict(width=0.7, color="white")

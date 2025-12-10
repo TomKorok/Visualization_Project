@@ -28,5 +28,19 @@ chart_config = {
         "chart_name": "GDP Per Capita",
         "hover_prefix": "%{customdata[",
         "hover_suffix": "]:.2f} US$"
+    },
+        "HDIValue": {
+        "color": "Purple",
+        "legend_name": "Human Development Index [0 - 10] Scaled",
+        "chart_name": "Human Development Index",
+        "hover_prefix": "%{customdata[",
+        "hover_suffix": "]:.2f}"
+    },
+        "LifeExpectancy": {
+        "color": "grey",
+        "legend_name": "Life Expectancy [0 - 10] min-max normalized",
+        "chart_name": "Life Expectancy Index",
+        "hover_prefix": "%{customdata[",
+        "hover_suffix": "]:.2f}"
     }
 }

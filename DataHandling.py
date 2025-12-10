@@ -4,12 +4,14 @@ from functools import reduce
 
 class DataHandler:
     def __init__(self):
-        self.all_indexes = ["BMI", "DIIndex", "GDPValue", "GDPCapitaValue"]
+        self.all_indexes = ["BMI", "DIIndex", "GDPValue", "GDPCapitaValue","HDIValue", "LifeExpectancy"]
         self.data = {
             "BMI": LoadBigMacIndex(),
             "DIIndex": LoadDemocracyIndex(),
             "GDPValue": LoadGDPCountry(),
             "GDPCapitaValue": LoadGDPCapita(),
+            "HDIValue": LoadHDI(),
+            "LifeExpectancy": loadLifeExpectancy(),
             "all": None
         }
         all_dfs = self.get_merged_df(df_names = self.all_indexes, how="outer")
@@ -121,6 +123,48 @@ def LoadGDPCapita():
 
     df["GDPCapitaValue"] = 10 * (np.log(df["GDPCapitaValue"]) / np.log(df["GDPCapitaValue"]).max()) # map the values between 0 and 10
 
+    return df
+
+def LoadHDI():
+    df = pd.read_csv("hdr-data.csv")
+
+    # Standardize column names
+    df = df.rename(columns={
+        "country": "country",
+        "year": "year",
+        "value": "HDIValue"
+    })
+
+    # Keep only needed columns and filter years
+    df = df[["country", "year", "HDIValue"]]
+    df = df[df["year"] >= 2000]
+
+    # Ensure correct types
+    df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+    df = df.dropna(subset=["HDIValue"])
+
+    max_val = df["HDIValue"].max()
+    df["HDIValue"] = 10 * (df["HDIValue"] / max_val)
+    return df
+
+def loadLifeExpectancy():
+    df = pd.read_csv("life-expectancy-unwpp.csv")
+
+    # Standardize column names
+    df = df.rename(columns={
+        "Entity": "country", 
+        "Year": "year", 
+        "Life expectancy - Sex: all - Age: 0 - Variant: estimates": "LifeExpectancy"})
+    
+    # Keep only needed columns and filter years
+    df = df[["country", "year", "LifeExpectancy"]]
+    df = df[df["year"] >= 2000]
+    df = df.dropna(subset=["LifeExpectancy"])
+
+    min_val = df["LifeExpectancy"].min()
+    max_val = df["LifeExpectancy"].max()
+
+    df["LifeExpectancy"] = 1 + 9 * (df["LifeExpectancy"] - min_val) / (max_val - min_val)
     return df
 
 def MergeDataFrames(dfs, how="inner"):
