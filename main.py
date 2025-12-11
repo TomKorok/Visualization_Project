@@ -172,4 +172,4 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_y
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
