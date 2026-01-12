@@ -13,7 +13,7 @@ dh = dh.DataHandler()
 app = Dash(__name__)
 
 app.layout = html.Div([
-    html.H1("Well-being Index comparison around the world", style={"textAlign": "center"}),
+    html.H1("Well-being Index comparison World Wide", style={"textAlign": "center"}),
 
     html.Div([
         html.Label("Select up to 2 Indexes:", style={"fontWeight": "bold"}),
