@@ -48,7 +48,7 @@ app.layout = html.Div([
             "justifyContent": "center",
             "alignItems": "center",
             "flexDirection": "column",
-            "width": "100%",
+            "width": "98%",
             "height": "80vh"
         }
     ),
