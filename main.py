@@ -30,13 +30,15 @@ app.layout = html.Div([
             value=[],  # default empty selection
             multi=True,
             maxHeight=300,
-            style={"width": "60%"}
+            style={"width": "100%"}
         )
     ], style={
         "display": "flex",
         "flexDirection": "column",
-        "alignItems": "center",
-        "padding": "10px"
+        "alignItems": "stretch",
+        "padding": "10px",
+        "width": "30% ",
+        "margin": "0 auto"
     }),
 
     html.Div(
@@ -174,4 +176,4 @@ def update_charts(clickData, _, __, selected_indexes, selected_chart, selected_y
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
